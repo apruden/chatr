@@ -1,0 +1,20 @@
+<div>
+  <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate>edit</button>
+  <dl class="dl-horizontal">
+    <dt translate>username</dt>
+    <dd>{{profile.username}}</dd>
+    <dt translate>dob</dt>
+    <dd>{{profile.dob}}</dd>
+    <dt translate>location</dt>
+    <dd>{{profile.location}}</dd>
+    <dt translate>headline</dt>
+    <dd>{{profile.headline}}</dd>
+  </dl>
+  <p>{{profile.about}}</p>
+</div>
+
+<ul rn-carousel class="image">
+  <li ng-repeat="image in profile.pictures">
+    <div class="layer">{{ image }}</div>
+  </li>
+</ul>
