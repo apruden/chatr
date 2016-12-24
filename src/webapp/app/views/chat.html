@@ -1,14 +1,12 @@
 <div class="media" ng-repeat="msg in messages">
-  <div class="media-left">
-    <a href=""><img class="media-object" src="" alt=""></a>
-  </div>
   <div class="media-body">
     {{msg.body}}
     <span>{{msg.sent}}</span>
   </div>
 </div>
-<form>
+<form ng-submit="send()">
   <div class="form-group">
     <input class="form-control" type="text">
+    <button type="submit" class="btn btn-primary" translate>send</button>
   </div>
 </form>

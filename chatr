@@ -1,6 +1,6 @@
 #!/bin/python
 
-import time, json, datetime
+import time, json, datetime, os, uuid
 from threading import Thread
 from flask import Flask, render_template, session, request, send_from_directory, jsonify, url_for
 import flask.json
@@ -14,7 +14,10 @@ from flask_social.datastore import SQLAlchemyConnectionDatastore
 from flask_social.utils import get_connection_values_from_oauth_response
 from flask_social.views import connect_handler
 
-from flask_sqlalchemy import SQLAlchemy
+from flask_sqlalchemy import SQLAlchemy, BaseQuery
+from sqlalchemy_searchable import SearchQueryMixin
+from sqlalchemy_utils.types import TSVectorType
+from sqlalchemy_searchable import make_searchable
 
 from flask_security import Security, SQLAlchemyUserDatastore, \
     UserMixin, RoleMixin, login_required
@@ -23,9 +26,13 @@ from flask_security.core import current_user
 
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from geoalchemy2.types import Geometry
-from geoalchemy2.elements import WKTElement
+from geoalchemy2.functions import ST_Distance
+from geoalchemy2.elements import WKTElement, WKBElement
+from sqlalchemy.types import JSON
+from geoalchemy2.shape import to_shape
 
 
+#TODO: better encoder logic, public vs private fields
 class AlchemyEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj.__class__, DeclarativeMeta):
@@ -36,28 +43,37 @@ class AlchemyEncoder(json.JSONEncoder):
                     json.dumps(data) # this will fail on non-encodable values, like other classes
                     fields[field] = data
                 except TypeError:
-                    fields[field] = None
+                    if isinstance(data, WKBElement):
+                        fields[field] = 'SRID=4326;%s' % (to_shape(data).wkt,)
+                    elif isinstance(data, datetime.date):
+                        fields[field] = data.strftime('%Y-%m-%d')
+                    else:
+                        fields[field] = None
             return fields
 
         return json.JSONEncoder.default(self, obj)
 
 
 app = Flask(__name__, static_url_path='/')
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://chatr:Admin123@localhost/chatr'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['SQLALCHEMY_ECHO'] = True
+
 app.config['SECRET_KEY'] = 'secret!'
 app.config['SECURITY_POST_LOGIN'] = '/#!/profiles/me'
 app.config['SOCIAL_FACEBOOK'] = {
-    'consumer_key': '621936294681039',
-    'consumer_secret': '070416545aadaeb30fbf411468d03eac'
+    'consumer_key': '',
+    'consumer_secret': ''
 }
 
 #app.config['SECURITY_CONFIRMABLE'] = False
 #app.config['SECURITY_TRACKABLE'] = False
 app.config['SOCIAL_CONNECT_ALLOW_VIEW'] = '/#!/profiles/me'
 
-
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
+make_searchable()
+
 roles_users = db.Table('roles_users',
         db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
         db.Column('role_id', db.Integer(), db.ForeignKey('role.id')))
@@ -90,12 +106,17 @@ class Profile(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True)
     gender = db.Column(db.Integer)
-    location = db.Column(Geometry(geometry_type='POINT', sird=4326))
+    location = db.Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
     dob = db.Column(db.Date())
     headline = db.Column(db.Text())
     about = db.Column(db.Text())
-    photos = db.Column(db.Text())
+    photos = db.Column(JSON())
     city = db.Column(db.String(255))
+
+    @property
+    def age(self):
+        #TODO: better way to calc ages? y1 - y2 ,then months, then days?
+        return int((datetime.datetime.now().date() - self.dob).days / 365)
 
 
 class Connection(db.Model):
@@ -113,12 +134,25 @@ class Connection(db.Model):
 
 
 class Message(db.Model):
-    a = db.Column(db.Integer, primary_key=True)
-    b = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    a = db.Column(db.Integer)
+    b = db.Column(db.Integer)
     body = db.Column(db.Text())
     sent = db.Column(db.DateTime())
     to = db.Column(db.Integer)
     fro = db.Column(db.Integer)
+
+
+class CityQuery(BaseQuery, SearchQueryMixin):
+    pass
+
+class City(db.Model):
+    query_class = CityQuery
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.Unicode(255))
+    country = db.Column(db.String(255))
+    location = db.Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
+    search_vector = db.Column(TSVectorType('name'))
 
 
 user_datastore = SQLAlchemyUserDatastore(db, User, Role)
@@ -140,12 +174,16 @@ def on_login_failed(sender, provider, oauth_response):
 
 @app.before_first_request
 def create_user():
-    db.create_all()
-    user = user_datastore.create_user(email='admin@test.com', password='password')
-    db.session.commit()
-    db.session.add(Profile(id=user.id, username='admin'))
-    db.session.commit()
-
+    print 'creating'
+    return
+    try:
+        db.create_all()
+        user = user_datastore.create_user(email='admin@test.com', password='password')
+        db.session.commit()
+        db.session.add(Profile(id=user.id, username='admin'))
+        db.session.commit()
+    except:
+        pass
 
 @app.login_manager.unauthorized_handler
 def unauth_handler():
@@ -166,6 +204,27 @@ def dumps(obj):
     return flask.json.dumps(obj, cls=AlchemyEncoder)
 
 
+@app.route('/api/_upload', methods=['POST'])
+@login_required
+def upload():
+    file = request.files['file']
+    filename = '%s.jpg' % (uuid.uuid4(),)
+    file.save(os.path.join('assets', filename))
+    return jsonify(filename=filename)
+
+
+@app.route('/api/cities')
+@login_required
+def cities():
+    return dumps(City.query.search(request.args.get('q')).limit(10).all())
+
+
+@app.route('/api/assets/<id>')
+@login_required
+def assets(id):
+    return send_from_directory('assets', id)
+
+
 @app.route('/api/profiles/<id>', methods=['GET', 'POST'])
 @login_required
 def profiles(id):
@@ -177,6 +236,7 @@ def profiles(id):
     if request.method == 'GET':
         return dumps(profile)
     elif request.method == 'POST':
+        request.json.pop('age', None)
         for k, v in request.json.items():
             setattr(profile, k, v)
 
@@ -187,7 +247,12 @@ def profiles(id):
 @app.route('/api/search')
 @login_required
 def search():
-    pt = WKTElement('POINT({0} {1})'.format(lon, lat), srid=4326)
+    profile = Profile.query.get(current_user.id)
+    if not profile:
+        return jsonify(message='not found'), 404
+    lon = request.args.get('lon')
+    lat = request.args.get('lat')
+    pt = WKTElement('POINT({0} {1})'.format(lon, lat), srid=4326) if lon else profile.location
     ageFrom = request.args.get('ageFrom', 18)
     ageTo = request.args.get('ageTo', 100)
 
@@ -195,34 +260,33 @@ def search():
             (Profile.gender == request.args.get('gender', 0)) &
             (Profile.dob >= datetime.datetime.now() - datetime.timedelta(days=365*ageTo)) &
             (Profile.dob <= datetime.datetime.now() - datetime.timedelta(days=365*ageFrom))
-            ).filter(func.ST_Distance(Profile.location, pt) < request.args.get('dist')).limit(10).all()
+            ).filter(ST_Distance(Profile.location, pt) < request.args.get('dist', 50000)).limit(10).all()
 
     #return models.Point.query.order_by(models.Point.geom.distance_box(pt)).first()
 
     return dumps(profiles)
 
-@app.route('/api/chats')
+@app.route('/api/chats', defaults={'id': None})
+@app.route('/api/chats/<id>')
 @login_required
-def chats():
-    a = request.args.get('a')
-    b = request.args.get('b')
-    to = request.args.get('to')
-
-    if a and b:
+def chats(id):
+    if id:
+        a = int(id)
+        b = current_user.id
         (a,b) = (a,b) if a < b else (b,a)
         messages = Message.query.filter_by(a=a, b=b).limit(20).all()
-    elif to:
-        messages = Message.query.filter_by(to=to).limit(20).all()
     else:
-        return jsonify(error='not found'), 404
+        to = current_user.id
+        messages = Message.query.filter_by(to=to).limit(20).all()
 
     return dumps(messages)
 
 
 @socketio.on('msg')
 def sio_send_message(message):
+    print '>>> msg %s' % (message,)
     db.session.add(Message(**message))
-    db.commit()
+    db.session.commit()
 
     if message['to'] in sids:
         send(message, room=sids[message['to']])
@@ -249,4 +313,10 @@ def dist(path):
 
 
 if __name__ == '__main__':
+    try:
+        print 'dropping'
+        #db.drop_all()
+    except:
+        pass
+
     socketio.run(app)

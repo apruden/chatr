@@ -90,3 +90,6 @@ ENV/
 
 bower_components/
 node_modules/
+chatr.conf
+assets/
+data.txt

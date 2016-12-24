@@ -89,3 +89,17 @@ body {
     border-bottom: 0;
   }
 }
+
+.bgimage {
+    text-align: right;
+    color: white;
+    background-size: cover;
+    height: 100%;
+    background-position: center center;
+}
+
+ul[rn-carousel] {
+    width: 400px;
+    height: 200px;
+    margin: 0 auto;
+}

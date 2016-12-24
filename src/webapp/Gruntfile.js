@@ -82,6 +82,13 @@ module.exports = function (grunt) {
         port: 5000,
         https: false,
         secure: false
+      },{
+        context: '/socket.io',
+        host: 'localhost',
+        port: 5000,
+        https: false,
+        secure: false,
+        ws: true
       }, {
         context: '/api',
         host: 'localhost',

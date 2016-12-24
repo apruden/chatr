@@ -1,20 +1,23 @@
-<div>
+<div class="row">
   <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate>edit</button>
+</div>
+<div class="row">
+  <ul rn-carousel rn-carousel-index="gallery" class="carousel2">
+    <li ng-repeat="photo in profile.photos">
+      <div ng-style="{'background-image': 'url(/api/assets/' + photo.filename + ')'}"  class="bgimage"></div>
+    </li>
+  </ul>
+  <div rn-carousel-indicators ng-if="profile.photos && profile.photos.length > 1" slides="profile.photos" rn-carousel-index="gallery"></div>
+</div>
+<div class="row">
+  <h3>{{profile.username}} - {{profile.headline}}
+  </h3>
   <dl class="dl-horizontal">
-    <dt translate>username</dt>
-    <dd>{{profile.username}}</dd>
-    <dt translate>dob</dt>
-    <dd>{{profile.dob}}</dd>
-    <dt translate>location</dt>
-    <dd>{{profile.location}}</dd>
-    <dt translate>headline</dt>
-    <dd>{{profile.headline}}</dd>
+    <dt translate>age</dt>
+    <dd>{{profile.age}}</dd>
+    <dt translate>city</dt>
+    <dd>{{profile.city}}</dd>
   </dl>
   <p>{{profile.about}}</p>
 </div>
 
-<ul rn-carousel class="image">
-  <li ng-repeat="image in profile.pictures">
-    <div class="layer">{{ image }}</div>
-  </li>
-</ul>
