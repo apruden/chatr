@@ -1,11 +1,16 @@
-<div class="media" ng-repeat="msg in messages">
-  <div class="media-left">
-    <a href=""><img class="media-object" src="" alt=""></a>
-  </div>
-  <div class="media-body">
-  <h4 class="media-heading">
-    {{msg.fro}}
-  </h4>
-    {{msg.body}}
+<div class="row">
+  <div class="col-xs-12">
+    <div class="media" ng-repeat="msg in messages">
+      <div class="media-left">
+        <a ng-href="#!/chat/{{msg.fro}}"><img class="media-object" ng-src="/assets/{{msg.fro}}.jpg"></a>
+      </div>
+      <div class="media-body">
+        <h4 class="media-heading">
+          <a ng-href="#!/chat/{{msg.fro}}">{{msg.username}}</a>
+        </h4>
+        <span>{{msg.sent}}</span>
+      </div>
+    </div>
   </div>
 </div>
+

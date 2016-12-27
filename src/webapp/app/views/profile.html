@@ -1,23 +1,33 @@
 <div class="row">
-  <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate>edit</button>
+  <div class="col-xs-12">
+    <form>
+      <div class="form-group">
+        <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate>edit</button>
+      </div>
+    </form>
+  </div>
 </div>
 <div class="row">
-  <ul rn-carousel rn-carousel-index="gallery" class="carousel2">
-    <li ng-repeat="photo in profile.photos">
-      <div ng-style="{'background-image': 'url(/api/assets/' + photo.filename + ')'}"  class="bgimage"></div>
-    </li>
-  </ul>
-  <div rn-carousel-indicators ng-if="profile.photos && profile.photos.length > 1" slides="profile.photos" rn-carousel-index="gallery"></div>
+  <div class="col-xs-12">
+    <ul rn-carousel rn-carousel-index="gallery" class="carousel2">
+      <li ng-repeat="photo in profile.photos">
+        <div ng-style="{'background-image': 'url(/api/assets/' + photo.filename + ')'}"  class="bgimage"></div>
+      </li>
+    </ul>
+    <div rn-carousel-indicators ng-if="profile.photos && profile.photos.length > 1" slides="profile.photos" rn-carousel-index="gallery"></div>
+  </div>
 </div>
 <div class="row">
-  <h3>{{profile.username}} - {{profile.headline}}
-  </h3>
-  <dl class="dl-horizontal">
-    <dt translate>age</dt>
-    <dd>{{profile.age}}</dd>
-    <dt translate>city</dt>
-    <dd>{{profile.city}}</dd>
-  </dl>
-  <p>{{profile.about}}</p>
+  <div class="col-xs-12">
+    <h3>{{profile.username}} - {{profile.headline}}
+    </h3>
+    <dl class="dl-horizontal">
+      <dt translate>age</dt>
+      <dd>{{profile.age}}</dd>
+      <dt translate>city</dt>
+      <dd>{{profile.city}}</dd>
+    </dl>
+    <p>{{profile.about}}</p>
+  </div>
 </div>
 

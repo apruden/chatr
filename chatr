@@ -116,7 +116,9 @@ class Profile(db.Model):
     @property
     def age(self):
         #TODO: better way to calc ages? y1 - y2 ,then months, then days?
-        return int((datetime.datetime.now().date() - self.dob).days / 365)
+        if self.dob:
+            return int((datetime.datetime.now().date() - self.dob).days / 365)
+        return 0
 
 
 class Connection(db.Model):
@@ -141,10 +143,20 @@ class Message(db.Model):
     sent = db.Column(db.DateTime())
     to = db.Column(db.Integer)
     fro = db.Column(db.Integer)
+    read = db.Column(db.DateTime())
+
+
+class Visit(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    to = db.Column(db.Integer)
+    fro = db.Column(db.Integer)
+    modified = db.Column(db.DateTime())
+    data = db.Column(JSON)
 
 
 class CityQuery(BaseQuery, SearchQueryMixin):
     pass
+
 
 class City(db.Model):
     query_class = CityQuery
@@ -178,12 +190,18 @@ def create_user():
     return
     try:
         db.create_all()
-        user = user_datastore.create_user(email='admin@test.com', password='password')
-        db.session.commit()
-        db.session.add(Profile(id=user.id, username='admin'))
-        db.session.commit()
+        _create_user('admin@test.com', 'password')
     except:
         pass
+
+
+def _create_user(email, password):
+    user = user_datastore.create_user(email=email, password=password)
+    db.session.commit()
+    db.session.add(Profile(id=user.id, username=email))
+    db.session.commit()
+    return user
+
 
 @app.login_manager.unauthorized_handler
 def unauth_handler():
@@ -192,12 +210,16 @@ def unauth_handler():
 
 @app.route('/api/_login')
 def app_login():
-    user = User.query.filter_by(email='admin@test.com').first()
+    #user = User.query.filter_by(email='admin@test.com').first()
+    user = User.query.get(int(request.args.get('id')))
     if user:
         login_user(user)
         return jsonify(message='ok')
     else:
-        return jsonify(message='error'), 401
+        user = _create_user('user%s@test.com' % (request.args.get('id'),), 'password')
+        login_user(user)
+        return jsonify(message='ok')
+        #return jsonify(message='error'), 401
 
 
 def dumps(obj):
@@ -277,19 +299,40 @@ def chats(id):
         messages = Message.query.filter_by(a=a, b=b).limit(20).all()
     else:
         to = current_user.id
-        messages = Message.query.filter_by(to=to).limit(20).all()
+        messages = Message.query.filter_by(to=to).order_by(Message.a, Message.b, Message.id.desc()).distinct(Message.a, Message.b).limit(20).all()
 
     return dumps(messages)
 
 
+@app.route('/api/visits')
+@login_required
+def visits():
+    to = current_user.id
+    visits = Visit.query.filter_by(to=to).limit(20).all()
+
+    return dumps(visits)
+
+
 @socketio.on('msg')
 def sio_send_message(message):
-    print '>>> msg %s' % (message,)
-    db.session.add(Message(**message))
+    msg = Message(**message)
+    db.session.add(msg)
     db.session.commit()
 
     if message['to'] in sids:
-        send(message, room=sids[message['to']])
+        message['id'] = msg.id
+        emit('msg', message, room=sids[message['to']])
+
+
+@socketio.on('ack')
+def sio_ack_message(ack):
+    t = datetime.datetime.now()
+    db.session.query(Message).filter(Message.id == ack['id']).update({Message.read: t})
+    db.session.commit()
+
+    if ack['to'] in sids:
+        ack['read'] = t.strftime('%Y-%m-%dT%H:%M:%SZ')
+        emit('ack', ack, room=sids[ack['to']])
 
 
 sids = {} #user id to sid

@@ -1,28 +1,38 @@
-<form class="form-inline" ng-submit="search()">
-  <div class="form-group">
-    <label class="sr-only" for="city" translate>city</label>
-    <input type="text" class="form-control" id="city" placeholder="city" uib-typeahead="city as city.name for city in getLocation($viewValue)" typeahead-loading="loadingLocations" typeahead-editable="false" typeahead-input-formatter="$model.name" typeahead-on-select="onSelectedLocation($item)" ng-model="selectedLocation">
-    <i ng-show="loadingLocations" class="fa fa-refresh"></i>
+<div class="row">
+  <div class="col-xs-12">
+    <form class="form-inline" ng-submit="search()">
+      <div class="form-group">
+        <label class="sr-only" for="city" translate>city</label>
+        <input type="text" class="form-control" id="city" placeholder="city" uib-typeahead="city as city.name for city in getLocation($viewValue)" typeahead-loading="loadingLocations" typeahead-editable="false" typeahead-input-formatter="$model.name" typeahead-on-select="onSelectedLocation($item)" ng-model="selectedLocation" autocomplete="off">
+        <i ng-show="loadingLocations" class="fa fa-refresh"></i>
+      </div>
+      <div class="form-group">
+        <label class="sr-only" for="dobFrom" translate>dobFrom</label>
+        <input type="text" ng-model="query.dobFrom" class="form-control" id="dobFrom" placeholder="dobFrom">
+      </div>
+      <div class="form-group">
+        <label class="sr-only" for="dobTo" translate>dobTo</label>
+        <input type="text" ng-model="query.dobTo" class="form-control" id="dobTo" placeholder="dobTo">
+      </div>
+      <div class="form-group">
+        <label class="sr-only" for="distance" translate>distance</label>
+        <select name="distance" ng-model="query.distance" ng-options="d for d in [50,75,100]" class="form-control">
+        </select>
+      </div>
+      <div class="form-group">
+        <button type="submit" class="btn btn-primary" translate>search</button>
+      </div>
+    </form>
   </div>
-  <div class="form-group">
-    <label class="sr-only" for="dobFrom" translate>dobFrom</label>
-    <input type="text" ng-model="query.dobFrom" class="form-control" id="dobFrom" placeholder="dobFrom">
-  </div>
-  <div class="form-group">
-    <label class="sr-only" for="dobTo" translate>dobTo</label>
-    <input type="text" ng-model="query.dobTo" class="form-control" id="dobTo" placeholder="dobTo">
-  </div>
-  <select name="distance" ng-model="query.distance" ng-options="d for d in [50,75,100]" class="form-control">
-  </select>
-  <button type="submit" class="btn btn-primary" translate>search</button>
-</form>
+</div>
 <div class="row" ng-repeat="profile in profiles">
   <div class="col-sm-6 col-md-4">
     <div class="thumbnail">
-      <img src="...">
+      <img ng-src="/assets/{{profile.id}}.jpg">
       <div class="caption">
-        <h3>{{profile.username}}, {{profile.dob}}, {{profile.city}}</h3>
+        <h3>{{profile.username}}, {{profile.age}}, {{profile.city}}</h3>
         <p>{{headline}}</p>
+      </div>
     </div>
   </div>
 </div>

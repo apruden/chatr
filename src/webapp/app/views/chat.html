@@ -1,12 +1,23 @@
-<div class="media" ng-repeat="msg in messages">
-  <div class="media-body">
-    {{msg.body}}
-    <span>{{msg.sent}}</span>
+<div class="row">
+  <div class="col-xs-12">
+    <div class="row" ng-repeat="msg in messages">
+      <div class="col-xs-10" ng-class="{'col-xs-offset-2': msg.to === me.id }">
+        <div in-view="$inview && !msg.read && msg.fro !== me.id && sendAck(msg)" class="alert" ng-class="{'alert-info': msg.to === me.id, 'alert-success': msg.fro === me.id }">
+          {{msg.body}}
+          <span>{{msg.sent}}</span>
+          <i ng-show="msg.read && msg.fro === me.id" class="glyphicon glyphicon-ok"></i>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
-<form ng-submit="send()">
-  <div class="form-group">
-    <input class="form-control" type="text">
-    <button type="submit" class="btn btn-primary" translate>send</button>
+<div class="row">
+  <div class="col-xs-12">
+    <form ng-submit="send()">
+      <div class="form-group">
+        <textarea class="form-control" ng-model="body"></textarea>
+        <button type="submit" class="btn btn-primary" translate>send</button>
+      </div>
+    </form>
   </div>
-</form>
+</div>

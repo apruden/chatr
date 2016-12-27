@@ -20,7 +20,8 @@ angular
     'btford.socket-io',
     'pascalprecht.translate',
     'angular-carousel',
-    'ngFileUpload'
+    'ngFileUpload',
+    'angular-inview'
   ])
   .config(function ($routeProvider, $httpProvider) {
     $routeProvider
@@ -35,6 +36,10 @@ angular
       .when('/inbox', {
         templateUrl: 'views/inbox.html',
         controller: 'InboxCtrl'
+      })
+      .when('/visits', {
+        templateUrl: 'views/visits.html',
+        controller: 'VisitCtrl'
       })
       .when('/profiles/:id', {
         templateUrl: 'views/profile.html',
@@ -60,22 +65,49 @@ angular
   .factory('socket', function (socketFactory) {
     return socketFactory({prefix: ''});
   })
+  .controller('BaseCtrl', function ($scope, Profile, $location) {
+    if (!$location.search().auth) {
+      $scope.me = Profile.get({id: 'me'});
+    }
+  })
   .controller('MainCtrl', function ($scope, $http) {
-    //$scope.account = Profile.get({id: 'me'});
-    $scope.login = function() {
-      $http.get('/api/_login');
+    $scope.login = function(id) {
+      $http.get('/api/_login?id=' + id);
     };
   })
-  .controller('ChatCtrl', function ($scope, Chat, $route, $routeParams, socket) {
-    $scope.messages = Chat.query({u: $routeParams.id});
+  .controller('ChatCtrl', function ($scope, Chat, $route, $routeParams, socket, Profile) {
+    var to = parseInt($routeParams.id, 10);
+    var fro = $scope.me.id;
+    var a = to < fro ? to : fro;
+    var b = a == to ? fro : to;
+
+    $scope.to = Profile.get({id: to});
+    $scope.messages = Chat.query({id: to});
     $scope.send = function() {
-      var msg = {a:2, b:1, body:'testing',sent:'2016-12-20',to:2, fro:1};
+      var msg = {a: a, b: b, body: $scope.body, sent: new Date().toISOString(), to: to, fro:fro};
       $scope.messages.push(msg);
       socket.emit('msg', msg);
+      $scope.body = '';
+    };
+
+    $scope.sendAck = function(msg) {
+      var ack = {to: msg.fro, id: msg.id, sent: msg.sent}
+      console.log('>>Acking ', ack);
+      msg.read = true;
+      socket.emit('ack', ack);
     };
 
     socket.on('msg', function(data) {
       $scope.messages.push(data);
+    });
+
+    socket.on('ack', function(ack) {
+      console.log('>>got ', ack);
+      $scope.messages.forEach(function(msg) {
+        if (msg.id == ack.id || ack.sent == msg.sent) {
+          msg.read = ack.read;
+        }
+      });
     });
   })
   .controller('InboxCtrl', function ($scope, Chat) {
@@ -100,6 +132,9 @@ angular
     $scope.loadMore = function() {
     };
   })
+  .controller('VisitCtrl', function ($scope, Visit) {
+    $scope.visits = Visit.query();
+  })
   .controller('ProfileCtrl', function ($scope, $location, $routeParams, Profile) {
     $scope.canEdit = $routeParams.id == 'me';
     $scope.profile = Profile.get({id: $routeParams.id});
@@ -119,6 +154,8 @@ angular
       $scope.year = dob ? dob.getUTCFullYear() : null;
       $scope.month = dob ? dob.getUTCMonth() + 1 : null;
       $scope.day = dob ? dob.getUTCDate() : null;
+      $scope.selectedLocation = $scope.profile.city ? {name: $scope.profile.city} : null;
+      $scope.profile.photos = $scope.profile.photos || [];
     });
 
     $scope.upload = function (file) {
@@ -146,10 +183,26 @@ angular
       $scope.profile.location = item.location;
     };
 
-    $scope.saveProfile = function() {
-      var tmp  = [$scope.year, $scope.month, $scope.day].join('-');
-      $scope.profile.dob = [$scope.year, $scope.month, $scope.day].join('-');
+    $scope.onMainChanged = function(item) {
+      $scope.profile.photos.forEach(function(p) {
+        if (p != item) {
+          p.isMain = false;
+        } else {
+          p.isPrivate = false;
+        }
+      });
+    };
 
+    $scope.deletePhoto = function(idx) {
+      $scope.profile.photos.splice(idx, 1);
+    };
+
+    $scope.onPrivateChanged = function(item) {
+      item.isMain = item.isMain && !item.isPrivate;
+    };
+
+    $scope.saveProfile = function() {
+      $scope.profile.dob = [$scope.year, $scope.month, $scope.day].join('-');
       $scope.profile.$save(function() {
         $location.url('/profiles/me');
       });
@@ -165,13 +218,16 @@ angular
   .service('Chat', function($resource) {
     return $resource('/api/chats/:id', {id: '@id'});
   })
+  .service('Visit', function($resource) {
+    return $resource('/api/visits');
+  })
   .service('Profile', function($resource) {
     return $resource('/api/profiles/:id', {id: '@id'});
   })
   .service('Search', function($resource) {
     return $resource('/api/search');
   })
-  .factory('AuthInterceptor', function($q, $rootScope) {
+  .factory('AuthInterceptor', function($q, $rootScope, $location) {
     return {
       request: function(config) {
         config = config || {};
@@ -183,7 +239,7 @@ angular
         }
 
         if (response.status === 401 || response.status === 403) {
-          $rootScope.$broadcast('LOGOUT');
+          $location.url('/?auth=true');
         } else {
           $rootScope.$broadcast('SERVER_ERROR', response);
         }

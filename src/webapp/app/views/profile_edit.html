@@ -1,56 +1,72 @@
-<form>
-  <div class="form-group">
-    <label for="username" translate>username</label>
-    <input id="username" ng-model="profile.username" class="form-control" type="text">
-  </div>
-  <div class="form-group">
-    <label for="gender" translate>gender</label>
-    <select name="gender" ng-model="profile.gender" ng-options="d.value as d.label for d in genders" class="form-control" required></select>
-  </div>
-  <div class="form-group">
-    <label for="dob" translate>dob</label>
-    <div class="form-inline">
-      <div class="form-group">
-        <select name="year" ng-model="year" ng-options="d for d in dobYears" class="form-control" required></select>
-      </div>
-      <div class="form-group">
-        <select name="month" ng-model="month" ng-options="d for d in dobMonths" class="form-control" required></select>
-      </div>
-      <div class="form-group">
-        <select name="day" ng-model="day" ng-options="d for d in dobDays" class="form-control" required></select>
-      </div>
-    </div>
-  </div>
-  <div class="form-group">
-    <label for="city" translate>city</label>
-    <input type="text" class="form-control" id="city" placeholder="city" uib-typeahead="city as city.name for city in getLocation($viewValue)" typeahead-loading="loadingLocations" typeahead-editable="false" typeahead-input-formatter="$model.name" typeahead-on-select="onSelectedLocation($item)" ng-model="selectedLocation">
-    <i ng-show="loadingLocations" class="fa fa-refresh"></i>
-  </div>
-  <div class="form-group">
-    <label for="headline" translate>headline</label>
-    <input id="headline" ng-model="profile.headline" class="form-control" type="text">
-  </div>
-  <div class="form-group">
-    <label for="about" translate>about</label>
-    <textarea id="about" ng-model="profile.about" class="form-control"></textarea>
-  </div>
-  <button class="btn btn-primary" ng-click="saveProfile()" translate>save</button>
-  <button class="btn btn-default" ng-click="cancelEdit()" translate>cancel</button>
-</form>
-
 <div class="row">
-  <div class="col-md-3" ng-repeat="photo in profile.photos">
-    <div class="thumbnail" href>
-      <img ng-src="/api/assets/{{photo.filename}}" alt="">
-      <div class="caption">
-        <p><a class="btn btn-default" href translate role="button">delete</a></p>
+  <div class="col-xs-12">
+    <form>
+      <div class="form-group">
+        <label for="username" translate>username</label>
+        <input id="username" ng-model="profile.username" class="form-control" type="text">
       </div>
-    </div>
+      <div class="form-group">
+        <label for="gender" translate>gender</label>
+        <select name="gender" ng-model="profile.gender" ng-options="d.value as d.label for d in genders" class="form-control" required></select>
+      </div>
+      <div class="form-group">
+        <label for="dob" translate>dob</label>
+        <div class="form-inline">
+          <div class="form-group col-md-4 col-xs-4">
+            <select name="year" ng-model="year" ng-options="d for d in dobYears" class="form-control" required></select>
+          </div>
+          <div class="form-group col-md-4 col-xs-4">
+            <select name="month" ng-model="month" ng-options="d for d in dobMonths" class="form-control" required></select>
+          </div>
+          <div class="form-group col-md-4 col-xs-4">
+            <select name="day" ng-model="day" ng-options="d for d in dobDays" class="form-control" required></select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="city" translate>city</label>
+        <input type="text" class="form-control" id="city" placeholder="city" uib-typeahead="city as city.name for city in getLocation($viewValue)" typeahead-loading="loadingLocations" typeahead-editable="false" typeahead-input-formatter="$model.name" typeahead-on-select="onSelectedLocation($item)" ng-model="selectedLocation" autocomplete="off">
+        <i ng-show="loadingLocations" class="fa fa-refresh"></i>
+      </div>
+      <div class="form-group">
+        <label for="headline" translate>headline</label>
+        <input id="headline" ng-model="profile.headline" class="form-control" type="text">
+      </div>
+      <div class="form-group">
+        <label for="about" translate>about</label>
+        <textarea id="about" ng-model="profile.about" class="form-control"></textarea>
+      </div>
+      <div class="row">
+        <div class="col-md-3" ng-repeat="photo in profile.photos">
+          <div class="thumbnail">
+            <img ng-src="/api/assets/{{photo.filename}}" alt="">
+            <div class="caption">
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" ng-model="photo.isMain" ng-change="onMainChanged(photo)"><span translate>main</span>
+                </label>
+              </div>
+              <div class="checkbox">
+                <label>
+                  <input type="checkbox" ng-model="photo.isPrivate" ng-change="onPrivateChanged(photo)"><span translate>private</span>
+                </label>
+              </div>
+              <p><a class="btn btn-default" href translate ng-click="deletePhoto($index)" role="button">delete</a></p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" ng-show="profile.photos.length < 5">
+        <div class="btn btn-default"
+             ng-model="file"
+             ngf-select="upload($file)"
+             ngf-patter=".jpg"
+             ngf-resize="{width: 800, height: 500, quality: 0.8, type: 'image/jpeg', centerCrop: true, pattern: '.jpg', restoreExif: false}" translate>uploadPhoto</div>
+      </div>
+      <button class="btn btn-primary" ng-click="saveProfile()" translate>save</button>
+      <button class="btn btn-default" ng-click="cancelEdit()" translate>cancel</button>
+    </form>
+
   </div>
 </div>
 
-<div class="button"
-  ng-model="file"
-  ngf-select="upload($file)"
-  ngf-patter=".jpg"
-  ngf-resize="{width: 800, height: 500, quality: 0.8, type: 'image/jpeg', centerCrop: true, pattern: '.jpg', restoreExif: false}">Upload on file select</div>
