@@ -1,0 +1,8 @@
+{
+    "dob": "Date of Birth",
+    "city": "City",
+    "username": "Username",
+    "profile": "Profile",
+    "visitors": "Visitors",
+    "logout": "Logout"
+}

@@ -3,7 +3,7 @@
     <div class="row" ng-repeat="msg in messages">
       <div class="col-xs-10" ng-class="{'col-xs-offset-2': msg.to === me.id }">
         <div in-view="$inview && !msg.read && msg.fro !== me.id && sendAck(msg)" class="alert" ng-class="{'alert-info': msg.to === me.id, 'alert-success': msg.fro === me.id }">
-          {{msg.body}}
+          {{msg.data.body}}
           <span>{{msg.sent}}</span>
           <i ng-show="msg.read && msg.fro === me.id" class="glyphicon glyphicon-ok"></i>
         </div>

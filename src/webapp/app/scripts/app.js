@@ -21,70 +21,113 @@ angular
     'pascalprecht.translate',
     'angular-carousel',
     'ngFileUpload',
-    'angular-inview'
+    'angular-inview',
+    'ui.router'
   ])
-  .config(function ($routeProvider, $httpProvider) {
-    $routeProvider
-      .when('/', {
+  .config(function ($stateProvider, $urlRouterProvider, $httpProvider, $translateProvider) {
+    $translateProvider.useStaticFilesLoader({prefix: 'i18n/', suffix: '.json'}).preferredLanguage('en').useSanitizeValueStrategy('escape');
+
+    function currentUser (Profile) {
+      var profile = Profile.get({id: 'me'});
+      return profile.$promise;
+    }
+
+    $urlRouterProvider.otherwise('/');
+
+    $stateProvider
+      .state('home', {
+        url: '/',
         templateUrl: 'views/main.html',
         controller: 'MainCtrl'
       })
-      .when('/chat/:id', {
+      .state('chat',{
+        url: '/chat/:id',
         templateUrl: 'views/chat.html',
+        resolve: {'currentUser': currentUser},
         controller: 'ChatCtrl'
       })
-      .when('/inbox', {
+      .state('inbox', {
+        url: '/inbox',
         templateUrl: 'views/inbox.html',
         controller: 'InboxCtrl'
       })
-      .when('/visits', {
+      .state('visitors', {
+        url: '/visits',
         templateUrl: 'views/visits.html',
         controller: 'VisitCtrl'
       })
-      .when('/profiles/:id', {
+      .state('profile', {
+        url: '/profiles/:id',
         templateUrl: 'views/profile.html',
+        resolve: {'currentUser': currentUser},
         controller: 'ProfileCtrl'
       })
-      .when('/profiles/me/edit', {
+      .state('profileEdit', {
+        url: '/profiles/me/edit',
         templateUrl: 'views/profile_edit.html',
         controller: 'ProfileEditCtrl'
       })
-      .when('/search', {
+      .state('search', {
+        url: '/search',
         templateUrl: 'views/search.html',
+        resolve: {'currentUser': currentUser},
         controller: 'SearchCtrl'
-      })
-      .otherwise({
-        redirectTo: '/'
       });
 
     $httpProvider.interceptors.push(['$injector', function($injector) {
       return $injector.get('AuthInterceptor');
     }]);
-
   })
   .factory('socket', function (socketFactory) {
     return socketFactory({prefix: ''});
   })
-  .controller('BaseCtrl', function ($scope, Profile, $location) {
-    if (!$location.search().auth) {
-      $scope.me = Profile.get({id: 'me'});
-    }
+  .controller('BaseCtrl', function ($scope, $rootScope, $state) {
+    $scope.showNav = false;
+
+    $rootScope.$on('$stateChangeError', function() {
+      $scope.showNav = false;
+      $state.go('home');
+    });
+
+    $rootScope.$on('$stateChangeStart', function(ev, next, nextParams) {
+      if (next.name !== 'home') {
+        $scope.showNav = true;
+      } else {
+        $scope.showNav = false;
+      }
+    });
   })
-  .controller('MainCtrl', function ($scope, $http) {
-    $scope.login = function(id) {
+  .controller('MainCtrl', function ($scope, $state, $http, Profile) {
+    Profile.get({id: 'me'}).$promise.then(function(profile) {
+      if (profile.location) {
+        $state.go('search');
+      } else {
+        $state.go('profileEdit');
+      }
+    });
+
+    $scope.login = function (id) {
       $http.get('/api/_login?id=' + id);
     };
   })
-  .controller('ChatCtrl', function ($scope, Chat, $route, $routeParams, socket, Profile) {
-    var to = parseInt($routeParams.id, 10);
-    var fro = $scope.me.id;
+  .controller('ChatCtrl', function ($scope, Chat, $state, $stateParams, socket, Profile, currentUser) {
+    var to = parseInt($stateParams.id, 10);
+    var fro = currentUser.id;
     var a = to < fro ? to : fro;
     var b = a == to ? fro : to;
 
     $scope.to = Profile.get({id: to});
     $scope.messages = Chat.query({id: to});
     $scope.send = function() {
-      var msg = {a: a, b: b, body: $scope.body, sent: new Date().toISOString(), to: to, fro:fro};
+      var msg = { a: a,
+        b: b,
+        data:{
+          body: $scope.body,
+          username: currentUser.username
+        },
+        sent: new Date().toISOString(),
+        to: to,
+        fro:fro };
       $scope.messages.push(msg);
       socket.emit('msg', msg);
       $scope.body = '';
@@ -92,7 +135,6 @@ angular
 
     $scope.sendAck = function(msg) {
       var ack = {to: msg.fro, id: msg.id, sent: msg.sent}
-      console.log('>>Acking ', ack);
       msg.read = true;
       socket.emit('ack', ack);
     };
@@ -102,7 +144,6 @@ angular
     });
 
     socket.on('ack', function(ack) {
-      console.log('>>got ', ack);
       $scope.messages.forEach(function(msg) {
         if (msg.id == ack.id || ack.sent == msg.sent) {
           msg.read = ack.read;
@@ -113,10 +154,9 @@ angular
   .controller('InboxCtrl', function ($scope, Chat) {
     $scope.messages = Chat.query();
   })
-  .controller('SearchCtrl', function ($scope, Search, Cities) {
-    $scope.query = {distance: 50};
+  .controller('SearchCtrl', function ($scope, Search, Cities, currentUser) {
+    $scope.query = {distance: 50, loc: currentUser.location};
     $scope.profiles = Search.query($scope.query);
-
     $scope.search = function() {
       $scope.profiles = Search.query($scope.query);
     };
@@ -135,15 +175,16 @@ angular
   .controller('VisitCtrl', function ($scope, Visit) {
     $scope.visits = Visit.query();
   })
-  .controller('ProfileCtrl', function ($scope, $location, $routeParams, Profile) {
-    $scope.canEdit = $routeParams.id == 'me';
-    $scope.profile = Profile.get({id: $routeParams.id});
-
+  .controller('ProfileCtrl', function ($scope, $state, $stateParams, Profile, currentUser) {
+    $scope.canEdit = $stateParams.id == 'me';
+    $scope.profile = Profile.get({
+      id: $stateParams.id,
+      visitor: currentUser.username});
     $scope.editProfile = function() {
-      $location.url('/profiles/me/edit');
+      $state.go('profileEdit');
     };
   })
-  .controller('ProfileEditCtrl', function ($scope, $location, $routeParams, Profile, Upload, Cities) {
+  .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, Profile, Upload, Cities) {
     $scope.genders = [{label: 'male', value: 0}, {label: 'female', value: 1}];
     $scope.dobYears = _.range(1916, 2000);
     $scope.dobMonths = _.range(1, 12);
@@ -204,12 +245,12 @@ angular
     $scope.saveProfile = function() {
       $scope.profile.dob = [$scope.year, $scope.month, $scope.day].join('-');
       $scope.profile.$save(function() {
-        $location.url('/profiles/me');
+        $state.go('profile', {id: 'me'});
       });
     };
 
     $scope.cancelEdit = function() {
-      $location.url('/profiles/me');
+      $state.go('profile', {id: 'me'});
     };
   })
   .service('Cities', function($resource) {
@@ -227,7 +268,7 @@ angular
   .service('Search', function($resource) {
     return $resource('/api/search');
   })
-  .factory('AuthInterceptor', function($q, $rootScope, $location) {
+  .factory('AuthInterceptor', function($q, $rootScope) {
     return {
       request: function(config) {
         config = config || {};
@@ -239,7 +280,7 @@ angular
         }
 
         if (response.status === 401 || response.status === 403) {
-          $location.url('/?auth=true');
+          $rootScope.$broadcast('AUTH_ERROR', response);
         } else {
           $rootScope.$broadcast('SERVER_ERROR', response);
         }
