@@ -52,7 +52,7 @@ angular
         controller: 'InboxCtrl'
       })
       .state('visitors', {
-        url: '/visits',
+        url: '/visitors',
         templateUrl: 'views/visits.html',
         controller: 'VisitCtrl'
       })
@@ -61,6 +61,11 @@ angular
         templateUrl: 'views/profile.html',
         resolve: {'currentUser': currentUser},
         controller: 'ProfileCtrl'
+      })
+      .state('profileCreate', {
+        url: '/profiles/me/create',
+        templateUrl: 'views/profile_edit.html',
+        controller: 'ProfileEditCtrl'
       })
       .state('profileEdit', {
         url: '/profiles/me/edit',
@@ -90,7 +95,7 @@ angular
     });
 
     $rootScope.$on('$stateChangeStart', function(ev, next, nextParams) {
-      if (next.name !== 'home') {
+      if (next.name !== 'home' && next.name !== 'profileCreate') {
         $scope.showNav = true;
       } else {
         $scope.showNav = false;
@@ -99,22 +104,24 @@ angular
   })
   .controller('MainCtrl', function ($scope, $state, $http, Profile) {
     Profile.get({id: 'me'}).$promise.then(function(profile) {
-      if (profile.location) {
-        $state.go('search');
-      } else {
-        $state.go('profileEdit');
+      $state.go('search');
+    }).catch(function(e) {
+      if (e.status === 404) {
+        $state.go('profileCreate');
       }
     });
 
     $scope.login = function (id) {
-      $http.get('/api/_login?id=' + id);
+      $http.get('/api/_login?id=' + id, function() {
+        $state.go('search');
+      });
     };
   })
   .controller('ChatCtrl', function ($scope, Chat, $state, $stateParams, socket, Profile, currentUser) {
     var to = parseInt($stateParams.id, 10);
     var fro = currentUser.id;
     var a = to < fro ? to : fro;
-    var b = a == to ? fro : to;
+    var b = a === to ? fro : to;
 
     $scope.to = Profile.get({id: to});
     $scope.messages = Chat.query({id: to});
@@ -145,7 +152,7 @@ angular
 
     socket.on('ack', function(ack) {
       $scope.messages.forEach(function(msg) {
-        if (msg.id == ack.id || ack.sent == msg.sent) {
+        if (msg.id === ack.id || ack.sent === msg.sent) {
           msg.read = ack.read;
         }
       });
@@ -176,10 +183,12 @@ angular
     $scope.visits = Visit.query();
   })
   .controller('ProfileCtrl', function ($scope, $state, $stateParams, Profile, currentUser) {
-    $scope.canEdit = $stateParams.id == 'me';
+    $scope.canEdit = $stateParams.id === 'me';
     $scope.profile = Profile.get({
       id: $stateParams.id,
-      visitor: currentUser.username});
+      username: currentUser.username,
+      age: currentUser.age,
+      city: currentUser.city});
     $scope.editProfile = function() {
       $state.go('profileEdit');
     };
@@ -197,6 +206,8 @@ angular
       $scope.day = dob ? dob.getUTCDate() : null;
       $scope.selectedLocation = $scope.profile.city ? {name: $scope.profile.city} : null;
       $scope.profile.photos = $scope.profile.photos || [];
+    }).catch(function() {
+      $scope.profile.photos = [];
     });
 
     $scope.upload = function (file) {

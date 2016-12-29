@@ -178,7 +178,7 @@ def on_login_failed(sender, provider, oauth_response):
     connection_values = get_connection_values_from_oauth_response(provider, oauth_response)
     user = user_datastore.create_user(email='', password='') #fill in relevant stuff here
     db.session.commit()
-    db.session.add(Profile(id=user.id, username='user%s' % (int(time.time()),)))
+    #db.session.add(Profile(id=user.id, username='user%s' % (int(time.time()),)))
     connection_values['user_id'] = user.id
     connect_handler(connection_values, provider)
     db.session.commit()
@@ -198,8 +198,8 @@ def create_user():
 
 def _create_user(email, password):
     user = user_datastore.create_user(email=email, password=password)
-    db.session.commit()
-    db.session.add(Profile(id=user.id, username=email))
+    #db.session.commit()
+    #db.session.add(Profile(id=user.id, username=email))
     db.session.commit()
     return user
 
@@ -227,7 +227,6 @@ def app_login():
         user = _create_user('user%s@test.com' % (request.args.get('id'),), 'password')
         login_user(user)
         return jsonify(message='ok')
-        #return jsonify(message='error'), 401
 
 
 def dumps(obj):
@@ -263,19 +262,20 @@ else:
     bf = BloomFilter(10**7, 0.001, BLOOM_PATH)
 
 
+@app.route('/api/profiles', methods=['POST'], defaults = {'id': None})
 @app.route('/api/profiles/<id>', methods=['GET', 'POST'])
 @login_required
 def profiles(id):
     if id == 'me':
         id = current_user.id
-    profile = Profile.query.get(id)
-    if not profile:
+    profile = Profile.query.get(id) if id else None
+    if not profile and id:
         return jsonify(message='not found'), 404
     if request.method == 'GET':
-        if current_user.id != id and request.args.get('visitor') and not ((current_user.id, id) in bf):
+        if current_user.id != id and request.args and not ((current_user.id, id) in bf):
             visit = Visit(to=id,
                     fro=current_user.id,
-                    data= dict(username=request.args.get('visitor')),
+                    data=request.args,
                     modified=datetime.datetime.now())
             db.session.add(visit)
             db.session.commit()
@@ -284,21 +284,25 @@ def profiles(id):
     elif request.method == 'POST':
         request.json.pop('age', None)
 
+        if not profile:
+            profile = Profile()
+            db.session.add(profile)
+
         for k, v in request.json.items():
             setattr(profile, k, v)
 
         db.session.commit()
 
-        main_photo = '%s.jpg' % id
+        main_photo = 'assets/%s.jpg' % id
 
         if os.path.exists(main_photo):
             os.unlink(main_photo)
 
         try:
-            pic = next(x.filename for x in profile.photos if x.isMain)
+            pic = next(x['filename'] for x in profile.photos if x['isMain'])
 
             if pic:
-                os.symlink(main_photo, 'assets/%s' % (pic,))
+                os.symlink('%s' % (pic,), main_photo)
         except StopIteration:
             pass
 

@@ -37,7 +37,7 @@
 <div class="row" ng-repeat="profile in profiles">
   <div class="col-sm-6 col-md-4">
     <div class="thumbnail">
-      <img ng-style="{'background-image': 'url(/assets/{{profile.id}}.jpg), url(http://placehold.it/200x200)', 'width': '200px', height: '200px'}">
+      <img ng-style="{'background-image': 'url(/api/assets/{{profile.id}}.jpg), url(http://placehold.it/200x200)', 'width': '200px', height: '200px'}">
       <div class="caption">
         <h3>
           <a ng-href="#!/profiles/{{profile.id}}">{{profile.username}}, {{profile.age}}, {{profile.city}}</a>
