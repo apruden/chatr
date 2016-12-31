@@ -1,27 +1,33 @@
 <div class="row">
   <div class="col-xs-12">
-    <form class="form" ng-submit="search()">
+    <form novalidate name="searchForm" class="form" ng-submit="searchForm.$valid && search()">
       <div class="row">
-        <div class="form-group col-md-4 col-xs-9">
-          <label class="sr-only" for="city" translate>city</label>
-          <input type="text" class="form-control" id="city" placeholder="city" uib-typeahead="city as city.name for city in getLocation($viewValue)" typeahead-loading="loadingLocations" typeahead-editable="false" typeahead-input-formatter="$model.name" typeahead-on-select="onSelectedLocation($item)" ng-model="selectedLocation" autocomplete="off">
+        <div class="form-group col-md-6 col-xs-8" ng-class="{'has-error': searchForm.city.$invalid}">
+          <label for="city" translate>city</label>
+          <input type="text" class="form-control" id="city" name="city" placeholder="{{'city' | translate}}" uib-typeahead="city as city.name for city in getLocation($viewValue)" typeahead-loading="loadingLocations" typeahead-editable="false" typeahead-input-formatter="$model.name" typeahead-on-select="onSelectedLocation($item)" ng-model="selectedLocation" autocomplete="off" required>
           <i ng-show="loadingLocations" class="fa fa-refresh"></i>
         </div>
-        <div class="form-group col-md-2 col-xs-3">
-          <label class="sr-only" for="distance" translate>distance</label>
-          <select name="distance" ng-model="query.distance" ng-options="d for d in [50,75,100]" class="form-control">
+        <div class="form-group col-md-2 col-xs-4" ng-class="{'has-error': searchForm.distance.$invalid}">
+          <label for="distance" translate>distance</label>
+          <select name="distance" ng-model="query.distance" ng-options="d for d in [50,75,100]" class="form-control" required>
           </select>
         </div>
-        <div class="form-group col-md-2 col-xs-6">
-          <label class="sr-only" for="dobFrom" translate>dobFrom</label>
-          <input type="text" ng-model="query.dobFrom" class="form-control" id="dobFrom" placeholder="dobFrom">
+        <div class="form-group col-md-2 col-xs-6" ng-class="{'has-error': searchForm.dobFrom.$invalid}">
+          <label for="dobFrom" translate>age</label>
+          <select name="dobFrom" ng-model="query.dobFrom" ng-options="d for d in agesFrom" class="form-control" required>
+          </select>
         </div>
-        <div class="form-group col-md-2 col-xs-6">
-          <label class="sr-only" for="dobTo" translate>dobTo</label>
-          <input type="text" ng-model="query.dobTo" class="form-control" id="dobTo" placeholder="dobTo">
+        <div class="form-group col-md-2 col-xs-6" ng-class="{'has-error': searchForm.dobTo.$invalid}">
+          <label for="dobTo" translate>to</label>
+          <select name="dobTo" ng-model="query.dobTo" ng-options="d for d in agesTo" class="form-control" required>
+          </select>
         </div>
-        <div class="form-group col-md-2 col-xs-2">
-          <button type="submit" class="btn btn-primary" translate>search</button>
+      </div>
+      <div class="row">
+        <div class="col-xs-12">
+          <div class="form-group pull-right">
+            <button type="submit" class="btn btn-primary" translate>search</button>
+          </div>
         </div>
       </div>
     </form>
@@ -34,16 +40,33 @@
     </div>
   </div>
 </div>
-<div class="row" ng-repeat="profile in profiles">
-  <div class="col-sm-6 col-md-4">
+<div class="row" ng-repeat="chunk in chunked">
+  <div class="col-md-4" ng-repeat="profile in chunk">
     <div class="thumbnail">
-      <img ng-style="{'background-image': 'url(/api/assets/{{profile.id}}.jpg), url(http://placehold.it/200x200)', 'width': '200px', height: '200px'}">
+      <a ng-href="#!/profiles/{{profile.id}}">
+        <div class="img-overlay-md center-block">
+          <img ng-style="{'background-image': 'url(/api/assets/{{profile.id}}.jpg), url(http://placehold.it/200x200)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '200px', height: '200px'}">
+          <div class="thumb-overlay" ng-if="profile.online">
+            <i class="glyphicon glyphicon-signal"></i>
+          </div>
+        </div>
+      </a>
       <div class="caption">
-        <h3>
+        <h4>
           <a ng-href="#!/profiles/{{profile.id}}">{{profile.username}}, {{profile.age}}, {{profile.city}}</a>
-        </h3>
-        <p>{{headline}}</p>
+        </h4>
+        <p>{{profile.headline}}</p>
       </div>
     </div>
+  </div>
+</div>
+<div class="row">
+  <div class="col-xs-12">
+    <nav aria-label="loadMore">
+      <ul class="pager">
+        <li ng-show="offset"><a href ng-click="loadMore(-1)" translate>prev</a></li>
+        <li ng-show="profiles.length === 20"><a href ng-click="loadMore(1)" translate>next</a></li>
+      </ul>
+    </nav>
   </div>
 </div>

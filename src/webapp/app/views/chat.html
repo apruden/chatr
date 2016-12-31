@@ -1,11 +1,33 @@
 <div class="row">
+  <div class="navbar navbar-default navbar-fixed-top second-nav" role="navigation">
+    <div class="container">
+      <div class="collapse navbar-collapse navbar-header">
+        <a class="navbar-brand navbar-chat" ng-href="#!/profiles/{{to.id}}"><img ng-style="{'background-image': 'url(/api/assets/' + to.id + '.jpg), url(http://placehold.it/50x50)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '50px', height: '50px', display: 'inline-block'}"> {{to.username}}, {{to.age}}, {{to.city}}</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="row top-buffer">
+  <div class="col-xs-12">
+    <nav aria-label="loadMore" ng-if="hasMore">
+      <ul class="pager">
+        <li ng-show="olderMessages.length === 20 || (offset === 0 && messages.length === 20)"><a href ng-click="loadMore()" translate>prev</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+<div class="row">
   <div class="col-xs-12">
     <div class="row" ng-repeat="msg in messages">
-      <div class="col-xs-10" ng-class="{'col-xs-offset-2': msg.to === me.id }">
-        <div in-view="$inview && !msg.read && msg.fro !== me.id && sendAck(msg)" class="alert" ng-class="{'alert-info': msg.to === me.id, 'alert-success': msg.fro === me.id }">
-          {{msg.data.body}}
-          <span>{{msg.sent}}</span>
-          <i ng-show="msg.read && msg.fro === me.id" class="glyphicon glyphicon-ok"></i>
+      <div class="col-xs-10" ng-class="{'col-xs-offset-2': msg.fro === me.id }">
+        <div in-view="$inview && !msg.read && msg.fro !== me.id && sendAck(msg)" class="alert" ng-class="{'alert-info': msg.fro === me.id, 'chat-default': msg.to === me.id }">
+          <div ng-bind-html="msg.data.body | embed"></div>
+          <div class="row">
+            <div class="col-xs-12 text-right">
+              <span class="small text-muted">{{msg.sent}}</span> <i ng-show="msg.read && msg.fro === me.id" class="glyphicon glyphicon-ok"></i>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -16,8 +38,8 @@
     <form ng-submit="send()">
       <div class="form-group">
         <textarea class="form-control" ng-model="body"></textarea>
-        <button type="submit" class="btn btn-primary" translate>send</button>
       </div>
+      <button type="submit" class="btn btn-primary pull-right" translate>send</button>
     </form>
   </div>
 </div>

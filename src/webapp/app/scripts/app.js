@@ -1,3 +1,5 @@
+/* globals _ */
+
 'use strict';
 
 /**
@@ -11,6 +13,7 @@
 angular
   .module('webappApp', [
     'ngAnimate',
+    'ngEmbed',
     'ngCookies',
     'ngResource',
     'ngRoute',
@@ -24,11 +27,17 @@ angular
     'angular-inview',
     'ui.router'
   ])
+  .run(function($rootScope) {
+    $rootScope.$on('$stateChangeSuccess', function() {
+      window.scrollTo(0,0);
+    });
+  })
   .config(function ($stateProvider, $urlRouterProvider, $httpProvider, $translateProvider) {
     $translateProvider.useStaticFilesLoader({prefix: 'i18n/', suffix: '.json'}).preferredLanguage('en').useSanitizeValueStrategy('escape');
 
-    function currentUser (Profile) {
-      var profile = Profile.get({id: 'me'});
+    function currentUser (CachedProfile) {
+      var profile = CachedProfile.getProfile();
+
       return profile.$promise;
     }
 
@@ -83,27 +92,28 @@ angular
       return $injector.get('AuthInterceptor');
     }]);
   })
-  .factory('socket', function (socketFactory) {
-    return socketFactory({prefix: ''});
-  })
-  .controller('BaseCtrl', function ($scope, $rootScope, $state) {
+  .controller('BaseCtrl', function ($scope, $rootScope, $state, socketFactory) {
     $scope.showNav = false;
+    $scope.socket = null;
 
     $rootScope.$on('$stateChangeError', function() {
       $scope.showNav = false;
       $state.go('home');
     });
 
-    $rootScope.$on('$stateChangeStart', function(ev, next, nextParams) {
+    $rootScope.$on('$stateChangeStart', function(ev, next) {
       if (next.name !== 'home' && next.name !== 'profileCreate') {
         $scope.showNav = true;
+        $scope.socket = socketFactory({prefix: ''});
+        //$scope.socket.forward(['msg', 'ack']);
       } else {
         $scope.showNav = false;
+        $scope.socket = null;
       }
     });
   })
   .controller('MainCtrl', function ($scope, $state, $http, Profile) {
-    Profile.get({id: 'me'}).$promise.then(function(profile) {
+    Profile.get({id: 'me'}).$promise.then(function() {
       $state.go('search');
     }).catch(function(e) {
       if (e.status === 404) {
@@ -111,13 +121,14 @@ angular
       }
     });
 
-    $scope.login = function (id) {
-      $http.get('/api/_login?id=' + id, function() {
+    $scope.login = function (email) {
+      $http.get('/api/_login?email=' + email, function() {
         $state.go('search');
       });
     };
   })
-  .controller('ChatCtrl', function ($scope, Chat, $state, $stateParams, socket, Profile, currentUser) {
+  .controller('ChatCtrl', function ($scope, Chat, $state, $stateParams, Profile, currentUser) {
+    $scope.me = currentUser;
     var to = parseInt($stateParams.id, 10);
     var fro = currentUser.id;
     var a = to < fro ? to : fro;
@@ -136,36 +147,75 @@ angular
         to: to,
         fro:fro };
       $scope.messages.push(msg);
-      socket.emit('msg', msg);
+      $scope.socket.emit('msg', msg);
       $scope.body = '';
     };
 
     $scope.sendAck = function(msg) {
-      var ack = {to: msg.fro, id: msg.id, sent: msg.sent}
+      var ack = {to: msg.fro, id: msg.id, sent: msg.sent};
       msg.read = true;
-      socket.emit('ack', ack);
+      $scope.socket.emit('ack', ack);
     };
 
-    socket.on('msg', function(data) {
+    $scope.socket.on('msg', function(data) {
       $scope.messages.push(data);
     });
 
-    socket.on('ack', function(ack) {
+    $scope.socket.on('ack', function(ack) {
       $scope.messages.forEach(function(msg) {
         if (msg.id === ack.id || ack.sent === msg.sent) {
           msg.read = ack.read;
         }
       });
     });
+
+    $scope.olderMessages = [];
+    $scope.offset = 0;
+
+    $scope.loadMore = function() {
+      $scope.offset += 20;
+      $scope.olderMessages = Chat.query({id: to, offset: $scope.offset});
+      $scope.olderMessages.$promise.then(function(res) {
+        res.forEach(function(m) {
+          $scope.messages.unshift(m);
+        });
+      });
+    };
   })
   .controller('InboxCtrl', function ($scope, Chat) {
     $scope.messages = Chat.query();
+
+    $scope.loadMore = function(f) {
+      $scope.offset += f * 20;
+      $scope.messages = Chat.query({offset: $scope.offset});
+      window.scrollTo(0,0);
+    };
   })
-  .controller('SearchCtrl', function ($scope, Search, Cities, currentUser) {
-    $scope.query = {distance: 50, loc: currentUser.location};
+  .controller('SearchCtrl', function ($scope, Search, Cities, Criteria, currentUser) {
+    $scope.chunked = [];
+
+    $scope.agesFrom = _.range(18, 100);
+    $scope.agesTo = _.range(18, 100);
+    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {gender: currentUser.gender ? 0 : 1, distance: 50, location: currentUser.location};
     $scope.profiles = Search.query($scope.query);
+    $scope.profiles.$promise.then(function(profiles) {
+      $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
+        return Math.floor(idx/3);
+      }));
+    });
+    $scope.selectedLocation = $scope.query.city ? {name: $scope.query.city} : {};
+
     $scope.search = function() {
+      if (!angular.equals($scope.query, currentUser.criteria)) {
+        Criteria.save($scope.query);
+      }
+
       $scope.profiles = Search.query($scope.query);
+      $scope.profiles.$promise.then(function(profiles) {
+        $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
+          return Math.floor(idx/3);
+        }));
+      });
     };
 
     $scope.getLocation = function(q) {
@@ -173,17 +223,46 @@ angular
     };
 
     $scope.onSelectedLocation = function(item) {
+      $scope.query.city = item.name;
       $scope.query.location = item.location;
     };
 
-    $scope.loadMore = function() {
+    $scope.loadMore = function(f) {
+      $scope.offset += f * 20;
+      var q = angular.extend($scope.query, {offset: $scope.offset});
+      $scope.profiles = Search.query(q);
+      $scope.profiles.$promise.then(function(profiles) {
+        $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
+          return Math.floor(idx/3);
+        }));
+      });
+      window.scrollTo(0,0);
     };
   })
   .controller('VisitCtrl', function ($scope, Visit) {
+    $scope.offset = 0;
+    $scope.chunked = [];
     $scope.visits = Visit.query();
+    $scope.visits.$promise.then(function(visits) {
+      $scope.chunked = _.toArray(_.groupBy(visits, function(el, idx) {
+        return Math.floor(idx/3);
+      }));
+    });
+
+    $scope.loadMore = function(f) {
+      $scope.offset += f * 20;
+      $scope.visits = Visit.query({offset: $scope.offset});
+      $scope.visits.$promise.then(function(visits) {
+        $scope.chunked = _.toArray(_.groupBy(visits, function(el, idx) {
+          return Math.floor(idx/3);
+        }));
+      });
+      window.scrollTo(0,0);
+    };
   })
   .controller('ProfileCtrl', function ($scope, $state, $stateParams, Profile, currentUser) {
     $scope.canEdit = $stateParams.id === 'me';
+    $scope.canSend = true;
     $scope.profile = Profile.get({
       id: $stateParams.id,
       username: currentUser.username,
@@ -192,10 +271,31 @@ angular
     $scope.editProfile = function() {
       $state.go('profileEdit');
     };
+
+    $scope.message = '';
+    $scope.sendMessage = function() {
+      var to = parseInt($stateParams.id, 10);
+      var fro = currentUser.id;
+      var a = to < fro ? to : fro;
+      var b = a === to ? fro : to;
+
+      var msg = {a: a,
+        b: b,
+        data:{
+          body: $scope.message,
+          username: currentUser.username
+        },
+        sent: new Date().toISOString(),
+        to: to,
+        fro:fro };
+
+      $scope.socket.emit('msg', msg);
+      $scope.canSend = false;
+    };
   })
   .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, Profile, Upload, Cities) {
     $scope.genders = [{label: 'male', value: 0}, {label: 'female', value: 1}];
-    $scope.dobYears = _.range(1916, 2000);
+    $scope.dobYears = _.range(2000, 1916, -1);
     $scope.dobMonths = _.range(1, 12);
     $scope.dobDays = _.range(1,31);
     $scope.profile = Profile.get({id: 'me'});
@@ -217,6 +317,11 @@ angular
       }).then(function (resp) {
         console.log('Success ' + resp.config.data.file.name + 'uploaded. Response: ' + resp.data);
         $scope.profile.photos = $scope.profile.photos || [];
+
+        if ($scope.profile.photos.length === 0) {
+          resp.data.isMain = true;
+        }
+
         $scope.profile.photos.push(resp.data);
       }, function (resp) {
         console.log('Error status: ' + resp.status);
@@ -237,7 +342,7 @@ angular
 
     $scope.onMainChanged = function(item) {
       $scope.profile.photos.forEach(function(p) {
-        if (p != item) {
+        if (p !== item) {
           p.isMain = false;
         } else {
           p.isPrivate = false;
@@ -275,6 +380,22 @@ angular
   })
   .service('Profile', function($resource) {
     return $resource('/api/profiles/:id', {id: '@id'});
+  })
+  .service('CachedProfile', function(Profile) {
+    this.profile = null;
+
+    this.getProfile = function() {
+      if (this.profile) {
+        return this.profile;
+      }
+
+      return Profile.get({id: 'me'});
+    };
+
+    return this;
+  })
+  .service('Criteria', function($resource) {
+    return $resource('/api/profiles/me/criteria');
   })
   .service('Search', function($resource) {
     return $resource('/api/search');

@@ -4,25 +4,16 @@ import time, json, datetime, os, uuid
 from threading import Thread
 from flask import Flask, render_template, session, request, send_from_directory, jsonify, url_for, redirect
 import flask.json
+from functools import wraps
 
 from pybloomfilter import BloomFilter
 from flask_socketio import SocketIO, emit, join_room, leave_room, \
     close_room, rooms, disconnect, send
 
-from flask_social import Social, login_failed
-from flask_social.datastore import SQLAlchemyConnectionDatastore
-from flask_social.utils import get_connection_values_from_oauth_response
-from flask_social.views import connect_handler
-
 from flask_sqlalchemy import SQLAlchemy, BaseQuery
 from sqlalchemy_searchable import SearchQueryMixin
 from sqlalchemy_utils.types import TSVectorType
 from sqlalchemy_searchable import make_searchable
-
-from flask_security import Security, SQLAlchemyUserDatastore, \
-    UserMixin, RoleMixin, login_required
-from flask_security.utils import login_user, logout_user
-from flask_security.core import current_user
 
 from sqlalchemy.ext.declarative import DeclarativeMeta
 from geoalchemy2.types import Geometry
@@ -31,99 +22,101 @@ from geoalchemy2.elements import WKTElement, WKBElement
 from sqlalchemy.types import JSON
 from geoalchemy2.shape import to_shape
 
+from flask_oauthlib.client import OAuth, OAuthException
 
-#TODO: better encoder logic, public vs private fields
-class AlchemyEncoder(json.JSONEncoder):
-    def default(self, obj):
-        if isinstance(obj.__class__, DeclarativeMeta):
-            fields = {}
-            for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
-                data = obj.__getattribute__(field)
-                try:
-                    json.dumps(data) # this will fail on non-encodable values, like other classes
-                    fields[field] = data
-                except TypeError:
-                    if isinstance(data, WKBElement):
-                        fields[field] = 'SRID=4326;%s' % (to_shape(data).wkt,)
-                    elif isinstance(data, datetime.date):
-                        fields[field] = data.strftime('%Y-%m-%d')
-                    else:
-                        fields[field] = None
-            return fields
 
-        return json.JSONEncoder.default(self, obj)
+#import eventlet.debug
+#eventlet.debug.hub_blocking_detection(True)
 
+
+_sids = {} #user id to sid
 
 app = Flask(__name__, static_url_path='/')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://chatr:Admin123@localhost/chatr'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True
-
 app.config['SECRET_KEY'] = 'secret!'
-app.config['SECURITY_POST_LOGIN'] = '/#!/profiles/me'
-app.config['SOCIAL_FACEBOOK'] = {
-    'consumer_key': '',
-    'consumer_secret': ''
-}
 
-#app.config['SECURITY_CONFIRMABLE'] = False
-#app.config['SECURITY_TRACKABLE'] = False
-app.config['SOCIAL_CONNECT_ALLOW_VIEW'] = '/#!/profiles/me'
+FACEBOOK_APP_ID=''
+FACEBOOK_APP_SECRET=''
+
+oauth = OAuth(app)
+
+facebook = oauth.remote_app(
+    'facebook',
+    consumer_key=FACEBOOK_APP_ID,
+    consumer_secret=FACEBOOK_APP_SECRET,
+    request_token_params={'scope': 'email'},
+    base_url='https://graph.facebook.com',
+    request_token_url=None,
+    access_token_url='/oauth/access_token',
+    access_token_method='GET',
+    authorize_url='https://www.facebook.com/dialog/oauth'
+)
 
 socketio = SocketIO(app)
 db = SQLAlchemy(app)
 make_searchable()
 
-roles_users = db.Table('roles_users',
-        db.Column('user_id', db.Integer(), db.ForeignKey('user.id')),
-        db.Column('role_id', db.Integer(), db.ForeignKey('role.id')))
+
+def login_user(user):
+    session['user_id'] = user.id
 
 
-class Role(db.Model, RoleMixin):
-    id = db.Column(db.Integer(), primary_key=True)
-    name = db.Column(db.String(80), unique=True)
-    description = db.Column(db.String(255))
+def logout_user():
+    del session['user_id']
 
 
-class User(db.Model, UserMixin):
+def login_required(f):
+    @wraps(f)
+    def decorator(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify(error='auth'), 401
+        return f(*args, **kwargs)
+
+    return decorator
+
+
+class AlchemyEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj.__class__, DeclarativeMeta):
+            return obj._json()
+
+        return json.JSONEncoder.default(self, obj)
+
+
+class JsonMixin(object):
+    def _json(self):
+        obj = self
+        fields = {}
+        for field in [x for x in dir(obj) if not x.startswith('_') and x != 'metadata']:
+            data = obj.__getattribute__(field)
+            try:
+                json.dumps(data) # this will fail on non-encodable values, like other classes
+                fields[field] = data
+            except TypeError:
+                if isinstance(data, WKBElement):
+                    fields[field] = 'SRID=4326;%s' % (to_shape(data).wkt,)
+                elif isinstance(data, datetime.date):
+                    fields[field] = data.strftime('%Y-%m-%d')
+                else:
+                    fields[field] = None
+        return fields
+
+
+def dumps(obj):
+    return flask.json.dumps(obj, cls=AlchemyEncoder)
+
+
+class User(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True)
     password = db.Column(db.String(255))
-    active = db.Column(db.Boolean())
     confirmed_at = db.Column(db.DateTime())
-    roles = db.relationship('Role', secondary=roles_users,
-            backref=db.backref('users', lazy='dynamic'))
-    connections = db.relationship('Connection',
-            backref=db.backref('user', lazy='joined'))
 
 
-class Criteria(db.Model):
+class Connection(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
-    query = db.Column(db.String(255))
-
-
-class Profile(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(255), unique=True)
-    gender = db.Column(db.Integer)
-    location = db.Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
-    dob = db.Column(db.Date)
-    headline = db.Column(db.Text)
-    about = db.Column(db.Text)
-    photos = db.Column(JSON)
-    city = db.Column(db.String(255))
-
-    @property
-    def age(self):
-        #TODO: better way to calc ages? y1 - y2 ,then months, then days?
-        if self.dob:
-            return int((datetime.datetime.now().date() - self.dob).days / 365)
-        return 0
-
-
-class Connection(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     provider_id = db.Column(db.String(255))
     provider_user_id = db.Column(db.String(255))
     access_token = db.Column(db.String(255))
@@ -135,7 +128,47 @@ class Connection(db.Model):
     rank = db.Column(db.Integer)
 
 
-class Message(db.Model):
+class Criteria(db.Model, JsonMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    query = db.Column(db.String(255))
+
+
+class Profile(db.Model, JsonMixin):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(255), unique=True)
+    gender = db.Column(db.Integer)
+    location = db.Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
+    dob = db.Column(db.Date)
+    headline = db.Column(db.Text)
+    about = db.Column(db.Text)
+    photos = db.Column(JSON)
+    criteria = db.Column(JSON)
+    city = db.Column(db.String(255))
+    _public = True
+
+    @property
+    def online(self):
+        #TODO: use redis in distributed mode?
+        return self.id in _sids
+
+    @property
+    def age(self):
+        #TODO: better way to calc ages? y1 - y2 ,then months, then days?
+        if self.dob:
+            return int((datetime.datetime.now().date() - self.dob).days / 365)
+        return 0
+
+    def _json(self):
+        res = super(Profile, self)._json()
+
+        if self._public:
+            res.pop('dob', None)
+            res['photos'] = [p for p in self.photos if not p.get('isPrivate', False)] if self.photos else []
+
+        return res
+
+
+class Message(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
     a = db.Column(db.Integer)
     b = db.Column(db.Integer)
@@ -145,8 +178,13 @@ class Message(db.Model):
     fro = db.Column(db.Integer)
     read = db.Column(db.DateTime)
 
+    @property
+    def online(self):
+        #TODO: use redis in distributed mode?
+        return self.fro in _sids
 
-class Visit(db.Model):
+
+class Visit(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
     to = db.Column(db.Integer)
     fro = db.Column(db.Integer)
@@ -154,35 +192,23 @@ class Visit(db.Model):
     data = db.Column(JSON)
     read = db.Column(db.Boolean)
 
+    @property
+    def online(self):
+        #TODO: use redis in distributed mode?
+        return self.fro in _sids
+
 
 class CityQuery(BaseQuery, SearchQueryMixin):
     pass
 
 
-class City(db.Model):
+class City(db.Model, JsonMixin):
     query_class = CityQuery
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.Unicode(255))
     country = db.Column(db.String(255))
     location = db.Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
     search_vector = db.Column(TSVectorType('name'))
-
-
-user_datastore = SQLAlchemyUserDatastore(db, User, Role)
-security = Security(app, user_datastore)
-social = Social(app, SQLAlchemyConnectionDatastore(db, Connection))
-
-
-@login_failed.connect_via(app)
-def on_login_failed(sender, provider, oauth_response):
-    connection_values = get_connection_values_from_oauth_response(provider, oauth_response)
-    user = user_datastore.create_user(email='', password='') #fill in relevant stuff here
-    db.session.commit()
-    #db.session.add(Profile(id=user.id, username='user%s' % (int(time.time()),)))
-    connection_values['user_id'] = user.id
-    connect_handler(connection_values, provider)
-    db.session.commit()
-    login_user(user)
 
 
 @app.before_first_request
@@ -197,16 +223,70 @@ def create_user():
 
 
 def _create_user(email, password):
-    user = user_datastore.create_user(email=email, password=password)
-    #db.session.commit()
-    #db.session.add(Profile(id=user.id, username=email))
+    user = User(email=email, password=password)
+    db.session.add(user)
     db.session.commit()
     return user
 
 
-@app.login_manager.unauthorized_handler
-def unauth_handler():
-    return jsonify(success=False, message='Unauthorized'), 401
+@app.route('/login')
+def login():
+    callback = url_for(
+        'facebook_authorized',
+        next=request.args.get('next') or request.referrer or None,
+        _external=True
+    )
+
+    return facebook.authorize(callback=callback)
+
+
+@app.route('/login/authorized')
+def facebook_authorized():
+    resp = facebook.authorized_response()
+
+    if resp is None:
+        return 'Access denied: reason=%s error=%s' % (
+            request.args['error_reason'],
+            request.args['error_description']
+        ), 401
+
+    if isinstance(resp, OAuthException):
+        return 'Access denied: %s' % resp.message, 401
+
+    session['oauth_token'] = (resp['access_token'], '')
+    me = facebook.get('/me?fields=id,name,email')
+    connection = Connection.query.filter_by(provider_user_id=me.data['id']).first()
+
+    if not connection:
+        user = User(
+                email = me.data.get('email', None), #TODO: get email
+                confirmed_at = datetime.datetime.now()
+                )
+        db.session.add(user)
+        db.session.commit()
+
+        connection = Connection(
+                id = user.id,
+                provider_id = 'facebook',
+                provider_user_id = me.data['id'],
+                access_token = resp['access_token'],
+                secret = None,
+                full_name = me.data['name'],
+                display_name = me.data['name'],
+                profile_url = None,
+                image_url = None,
+                rank = None)
+        db.session.add(connection)
+        db.session.commit()
+
+    session['user_id'] = connection.id
+
+    return redirect(url_for('dist'))
+
+
+@facebook.tokengetter
+def get_facebook_oauth_token():
+    return session.get('oauth_token')
 
 
 @app.route('/api/_logout')
@@ -218,19 +298,14 @@ def app_logout():
 
 @app.route('/api/_login')
 def app_login():
-    #user = User.query.filter_by(email='admin@test.com').first()
-    user = User.query.get(int(request.args.get('id')))
+    user = User.query.filter(User.email == request.args.get('email')).first()
     if user:
         login_user(user)
         return jsonify(message='ok')
     else:
-        user = _create_user('user%s@test.com' % (request.args.get('id'),), 'password')
+        user = _create_user(request.args.get('email'), 'password')
         login_user(user)
         return jsonify(message='ok')
-
-
-def dumps(obj):
-    return flask.json.dumps(obj, cls=AlchemyEncoder)
 
 
 @app.route('/api/_upload', methods=['POST'])
@@ -266,26 +341,32 @@ else:
 @app.route('/api/profiles/<id>', methods=['GET', 'POST'])
 @login_required
 def profiles(id):
+    public = True
+    user_id = int(session['user_id'])
     if id == 'me':
-        id = current_user.id
+        id = user_id
+        public = False
     profile = Profile.query.get(id) if id else None
     if not profile and id:
         return jsonify(message='not found'), 404
     if request.method == 'GET':
-        if current_user.id != id and request.args and not ((current_user.id, id) in bf):
+        if user_id != id and request.args and not ((user_id, id) in bf):
             visit = Visit(to=id,
-                    fro=current_user.id,
+                    fro=user_id,
                     data=request.args,
                     modified=datetime.datetime.now())
             db.session.add(visit)
             db.session.commit()
-            bf.add((current_user.id, id))
+            bf.add((user_id, id))
+
+        profile._public = public
         return dumps(profile)
     elif request.method == 'POST':
+        request.json.pop('online', None)
         request.json.pop('age', None)
 
         if not profile:
-            profile = Profile()
+            profile = Profile(id=user_id)
             db.session.add(profile)
 
         for k, v in request.json.items():
@@ -293,36 +374,47 @@ def profiles(id):
 
         db.session.commit()
 
-        main_photo = 'assets/%s.jpg' % id
+        main_photo = 'assets/%s.jpg' % (profile.id,)
 
         if os.path.exists(main_photo):
             os.unlink(main_photo)
 
         try:
-            pic = next(x['filename'] for x in profile.photos if x['isMain'])
+            pic = next(x['filename'] for x in profile.photos if x.get('isMain', False))
 
             if pic:
                 os.symlink('%s' % (pic,), main_photo)
         except StopIteration:
             pass
 
+        profile._public = public
         return dumps(profile)
+
+
+@app.route('/api/profiles/me/criteria', methods=['POST'])
+@login_required
+def updateCriteria():
+    profile = Profile.query.get(int(session['user_id']))
+    profile.criteria = request.json
+    db.session.commit()
+
+    return jsonify(message='ok')
+
 
 @app.route('/api/search')
 @login_required
 def search():
-    loc = request.args.get('loc').split(';')[1]
+    loc = request.args.get('location').split(';')[1]
     pt = WKTElement(loc, srid=4326)
-    ageFrom = request.args.get('ageFrom', 18)
-    ageTo = request.args.get('ageTo', 100)
+    ageFrom = int(request.args.get('dobFrom', 18))
+    ageTo = int(request.args.get('dobTo', 100))
+    offset = int(request.args.get('offset', 0))
 
     profiles = Profile.query.filter(
-            (Profile.gender == request.args.get('gender', 0)) &
+            (Profile.gender == int(request.args.get('gender', 0))) &
             (Profile.dob >= datetime.datetime.now() - datetime.timedelta(days=365*ageTo)) &
             (Profile.dob <= datetime.datetime.now() - datetime.timedelta(days=365*ageFrom))
-            ).filter(ST_Distance(Profile.location, pt) < request.args.get('dist', 50000)).limit(10).all()
-
-    #return models.Point.query.order_by(models.Point.geom.distance_box(pt)).first()
+            ).filter(ST_Distance(Profile.location, pt) < int(request.args.get('dist', 50000))).offset(offset).limit(20).all()
 
     return dumps(profiles)
 
@@ -330,14 +422,24 @@ def search():
 @app.route('/api/chats/<id>')
 @login_required
 def chats(id):
+    offset = int(request.args.get('offset', 0))
+    user_id = int(session['user_id'])
     if id:
         a = int(id)
-        b = current_user.id
+        b = user_id
         (a,b) = (a,b) if a < b else (b,a)
-        messages = Message.query.filter_by(a=a, b=b).limit(20).all()
+        messages = Message.query.filter_by(a=a, b=b)\
+                .offset(offset)\
+                .limit(20)\
+                .all()
     else:
-        to = current_user.id
-        messages = Message.query.filter_by(to=to).order_by(Message.a, Message.b, Message.id.desc()).distinct(Message.a, Message.b).limit(20).all()
+        to = user_id
+        messages = Message.query.filter_by(to=to)\
+                .order_by(Message.a, Message.b, Message.id.desc())\
+                .distinct(Message.a, Message.b)\
+                .offset(offset)\
+                .limit(20)\
+                .all()
 
     return dumps(messages)
 
@@ -345,8 +447,9 @@ def chats(id):
 @app.route('/api/visits')
 @login_required
 def visits():
-    to = current_user.id
-    visits = Visit.query.filter_by(to=to).limit(20).all()
+    offset = int(request.args.get('offset', 0))
+    to = int(session['user_id'])
+    visits = Visit.query.filter_by(to=to).offset(offset).limit(20).all()
     unread = [v.id for v in visits if not v.read]
 
     if unread:
@@ -363,9 +466,9 @@ def sio_send_message(message):
     db.session.add(msg)
     db.session.commit()
 
-    if message['to'] in sids:
+    if message['to'] in _sids:
         message['id'] = msg.id
-        emit('msg', message, room=sids[message['to']])
+        emit('msg', message, room=_sids[message['to']])
 
 
 @socketio.on('ack')
@@ -374,23 +477,20 @@ def sio_ack_message(ack):
     db.session.query(Message).filter(Message.id == ack['id']).update({Message.read: t})
     db.session.commit()
 
-    if ack['to'] in sids:
+    if ack['to'] in _sids:
         ack['read'] = t.strftime('%Y-%m-%dT%H:%M:%SZ')
-        emit('ack', ack, room=sids[ack['to']])
-
-
-sids = {} #user id to sid
+        emit('ack', ack, room=_sids[ack['to']])
 
 
 @socketio.on('connect')
 def sio_connect_handler():
-    if current_user.is_authenticated:
-        sids[current_user.id] = request.sid
+    if 'user_id' in session:
+        _sids[int(session['user_id'])] = request.sid
 
 
 @socketio.on('disconnect')
 def sio_isconnect_handler():
-    print('Client disconnected')
+    _sids.pop(int(session['user_id']), None)
 
 
 @app.route('/', defaults={'path': 'index.html'})

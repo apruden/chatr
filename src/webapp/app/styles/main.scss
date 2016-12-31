@@ -115,3 +115,47 @@ ul[rn-carousel] {
     float:right!important;
 }
 
+.img-overlay-md {
+    position: relative;
+    max-width: 200px;
+}
+
+.img-overlay-sm {
+    position: relative;
+    max-width: 128px;
+}
+
+.thumb-overlay {
+    position: absolute;
+    bottom: 0;
+    right: 0;
+    color: #0f0;
+    padding: 10%;
+}
+
+.rn-carousel-control.rn-carousel-control-prev:before {
+    font-family: 'Glyphicons Halflings';
+    content: "\e132";
+}
+
+.second-nav {
+    top: 50px;
+}
+
+.rn-carousel-control.rn-carousel-control-next:before {
+    font-family: 'Glyphicons Halflings';
+    content: "\e131"; 
+}
+
+.navbar-chat {
+    height: 80px;
+}
+
+.top-buffer {
+    margin-top: 80px;
+}
+
+.chat-default {
+    background-color: #f5f5f5;
+    border-color: #e3e3e3;
+}

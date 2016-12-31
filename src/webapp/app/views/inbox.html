@@ -3,17 +3,39 @@
     <div class="alert alert-info" role="alert" ng-if="!messages || messages.length === 0">
       <p translate>noMessages</p>
     </div>
-    <div class="media" ng-repeat="msg in messages">
-      <div class="media-left">
-        <a ng-href="#!/chat/{{msg.fro}}"><img class="media-object" ng-src="/assets/{{msg.fro}}.jpg"></a>
-      </div>
-      <div class="media-body">
-        <h4 class="media-heading">
-          <a ng-href="#!/chat/{{msg.fro}}">{{msg.data.username}}</a>
-        </h4>
-        <span>{{msg.sent}}</span>
-      </div>
-    </div>
+    <ul class="media-list">
+      <li class="media" ng-repeat="msg in messages">
+        <div class="media-left">
+          <a ng-href="#!/chat/{{msg.fro}}">
+            <div class="img-overlay-sm">
+              <img class="media-object" ng-style="{'background-image': 'url(/api/assets/{{msg.fro}}.jpg), url(http://placehold.it/200x200)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '128px', height: '128px'}">
+              <div class="thumb-overlay" ng-if="msg.online">
+                <i class="glyphicon glyphicon-signal"></i>
+              </div>
+            </div>
+          </a>
+        </div>
+        <div class="media-body">
+          <h4 class="media-heading">
+            <a ng-href="#!/chat/{{msg.fro}}">
+              {{msg.data.username}}
+              <span ng-if="!msg.read" class="label label-success"><i class="glyphicon glyphicon-comment"></i> <span translate>new</span></span>
+            </a>
+          </h4>
+          <span>{{msg.sent}}</span>
+        </div>
+      </li>
+    </ul>
+  </div>
+</div>
+<div class="row">
+  <div class="col-xs-12">
+    <nav aria-label="loadMore">
+      <ul class="pager">
+        <li ng-show="offset"><a href ng-click="loadMore(-1)" translate>prev</a></li>
+        <li ng-show="messages.length === 20"><a href ng-click="loadMore(1)" translate>next</a></li>
+      </ul>
+    </nav>
   </div>
 </div>
 

@@ -5,13 +5,33 @@
     </div>
   </div>
 </div>
-<div class="row" ng-repeat="visit in visits">
-  <div class="col-sm-6 col-md-4">
+<div class="row" ng-repeat="chunk in chunked">
+  <div class="col-md-4" ng-repeat="visit in chunk">
     <div class="thumbnail">
-      <a href="#!/profiles/{{visit.fro}}"><img ng-style="{'background-image': 'url(/api/assets/{{visit.fro}}.jpg), url(http://placehold.it/200x200)', 'width': '200px', height: '200px'}"></a>
+      <a href="#!/profiles/{{visit.fro}}">
+        <div class="img-overlay-md center-block">
+          <img ng-style="{'background-image': 'url(/api/assets/{{visit.fro}}.jpg), url(http://placehold.it/200x200)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '200px', height: '200px'}">
+          <div class="thumb-overlay" ng-if="visit.online">
+            <i class="glyphicon glyphicon-signal"></i>
+          </div>
+        </div>
+      </a>
       <div class="caption">
-        <p><a href="#!/profiles/{{visit.fro}}">{{visit.data.username}}, {{visit.data.age}}, {{visit.data.city}}</a></p>
+        <h4>
+        <a href="#!/profiles/{{visit.fro}}">{{visit.data.username}}, {{visit.data.age}}, {{visit.data.city}} <span ng-if="!visit.read" class="label label-success"><i class="glyphicon glyphicon-eye-open"></i> <span translate>new</span></span></a>
+        </h4>
       </div>
     </div>
   </div>
 </div>
+<div class="row">
+  <div class="col-xs-12">
+    <nav aria-label="loadMore">
+      <ul class="pager">
+        <li ng-show="offset"><a href ng-click="loadMore(-1)" translate>prev</a></li>
+        <li ng-show="visits.length === 20"><a href ng-click="loadMore(1)" translate>next</a></li>
+      </ul>
+    </nav>
+  </div>
+</div>
+

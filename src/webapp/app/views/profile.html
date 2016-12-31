@@ -1,33 +1,50 @@
 <div class="row">
   <div class="col-xs-12">
-    <form>
+    <form class="pull-right">
       <div class="form-group">
         <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate>edit</button>
       </div>
     </form>
+    <h3>{{profile.username}} - {{profile.headline}}</h3>
+  </div>
+</div>
+<div class="row" ng-if="profile.photos && profile.photos.length > 0">
+  <div class="col-xs-12">
+    <div class="form-group">
+      <ul rn-carousel rn-carousel-index="gallery" class="carousel2" rn-carousel-controls>
+        <li ng-repeat="photo in profile.photos">
+          <div ng-style="{'background-image': 'url(/api/assets/' + photo.filename + ')'}"  class="bgimage"></div>
+        </li>
+      </ul>
+    </div>
   </div>
 </div>
 <div class="row">
   <div class="col-xs-12">
-    <ul rn-carousel rn-carousel-index="gallery" class="carousel2">
-      <li ng-repeat="photo in profile.photos">
-        <div ng-style="{'background-image': 'url(/api/assets/' + photo.filename + ')'}"  class="bgimage"></div>
-      </li>
-    </ul>
-    <div rn-carousel-indicators ng-if="profile.photos && profile.photos.length > 1" slides="profile.photos" rn-carousel-index="gallery"></div>
-  </div>
-</div>
-<div class="row">
-  <div class="col-xs-12">
-    <h3>{{profile.username}} - {{profile.headline}}
-    </h3>
+    <h4 translate>description</h4>
+    <div class="well">
     <dl class="dl-horizontal">
       <dt translate>age</dt>
       <dd>{{profile.age}}</dd>
       <dt translate>city</dt>
       <dd>{{profile.city}}</dd>
     </dl>
-    <p>{{profile.about}}</p>
+    </div>
+    <h4 translate>about</h4>
+    <div ng-bind-html="profile.about | embed"></div>
   </div>
 </div>
-
+<div class="row" ng-show="!canEdit">
+  <div class="col-xs-12">
+    <h4 translate>message</h4>
+    <div class="alert alert-success" role="alert" ng-show="!canSend">
+      <p><span translate>messageSent</span> <a ng-href="#!/chat/{{profile.id}}" translate>goToConversation</a></p>
+    </div>
+    <form name="sendMessageForm" ng-submit="sendMessage()" ng-show="canSend">
+      <div class="form-group">
+        <textarea id="message" ng-model="message" class="form-control" name="message"></textarea>
+      </div>
+      <button class="btn btn-primary pull-right" type="submit" translate>send</button>
+    </form>
+  </div>
+</div>
