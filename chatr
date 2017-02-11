@@ -1,6 +1,6 @@
 #!/bin/python
 
-import time, json, datetime, os, uuid
+import time, json, datetime, os, uuid, ConfigParser
 from threading import Thread
 from flask import Flask, render_template, session, request, send_from_directory, jsonify, url_for, redirect
 import flask.json
@@ -31,14 +31,16 @@ from flask_oauthlib.client import OAuth, OAuthException
 
 _sids = {} #user id to sid
 
+config = ConfigParser.ConfigParser()
+config.read('chatr.ini')
 app = Flask(__name__, static_url_path='/')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://chatr:Admin123@localhost/chatr'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True
 app.config['SECRET_KEY'] = 'secret!'
 
-FACEBOOK_APP_ID=''
-FACEBOOK_APP_SECRET=''
+FACEBOOK_APP_ID = config.get('facebook', 'app_id')
+FACEBOOK_APP_SECRET = config.get('facebook', 'app_secret')
 
 oauth = OAuth(app)
 

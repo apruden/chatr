@@ -1,0 +1,11 @@
+eventlet
+psycopg2
+Shapely
+pybloomfiltermmap
+SQLAlchemy
+SQLAlchemy-Searchable
+GeoAlchemy2
+Flask
+Flask-SocketIO
+Flask-SQLAlchemy
+Flask-OAuthlib
