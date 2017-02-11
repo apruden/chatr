@@ -1,0 +1,17 @@
+<!doctype html> <html> <head> <meta charset="utf-8"> <title></title> <meta name="description" content="chatr"> <meta name="viewport" content="width=device-width"> <!-- Place favicon.ico and apple-touch-icon.png in the root directory --> <link rel="stylesheet" href="styles/vendor.f0ba2b79.css"> <link rel="stylesheet" href="styles/main.afdf7ec3.css"> </head> <body ng-app="webappApp"> <!--[if lte IE 8]>
+      <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="http://browsehappy.com/">upgrade your browser</a> to improve your experience.</p>
+    <![endif]--> <div ng-controller="BaseCtrl"> <!-- Add your site or application content here --> <div class="header"> <div class="navbar navbar-inverse navbar-fixed-top" role="navigation"> <div class="container"> <!--<div class="navbar-header">
+              <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#js-navbar-collapse">
+              <span class="sr-only">Toggle navigation</span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              <span class="icon-bar"></span>
+              </button>
+              <a class="navbar-brand" href="#!/">chatr</a>
+              </div> --> <div class="collapse navbar-collapse navbar-header" id="js-navbar-collapse"> <a class="navbar-brand hidden-xs" href="#!/">chatr</a> <ul class="nav navbar-nav" ng-if="showNav"> <li><a href="/api/_logout"><i class="glyphicon glyphicon-log-out"></i> <span class="hidden-xs" translate>logout</span></a></li> <li><a ng-href="#!/profiles/me"><i class="glyphicon glyphicon-user"></i> <span class="hidden-xs" translate>profile</span></a></li> <li><a ng-href="#!/visitors"><i class="glyphicon glyphicon-eye-open"></i> <span class="hidden-xs" translate>visitors</span></a></li> <li><a ng-href="#!/inbox"><i class="glyphicon glyphicon-inbox"></i> <span class="hidden-xs" translate>inbox</span></a></li> <li><a href="#!/search"><i class="glyphicon glyphicon-search"></i> <span class="hidden-xs" translate>search</span></a></li> </ul> </div> </div> </div> </div> <div class="container"> <div ui-view autoscroll="false"></div> </div> <div class="footer"> <div class="container"> <p><span class="glyphicon glyphicon-heart"></span> chatr 2016</p> </div> </div> </div> <!-- Google Analytics: change UA-XXXXX-X to be your site's ID --> <script>!function(A,n,g,u,l,a,r){A.GoogleAnalyticsObject=l,A[l]=A[l]||function(){
+  (A[l].q=A[l].q||[]).push(arguments)},A[l].l=+new Date,a=n.createElement(g),
+r=n.getElementsByTagName(g)[0],a.src=u,r.parentNode.insertBefore(a,r)
+}(window,document,'script','https://www.google-analytics.com/analytics.js','ga');
+
+ga('create', 'UA-XXXXX-X');
+ga('send', 'pageview');</script> <script src="bower_components/socket.io-client/dist/socket.io.min.js"></script> <script src="scripts/vendor.ee165a47.js"></script> <script src="scripts/scripts.d955233a.js"></script> </body> </html>
