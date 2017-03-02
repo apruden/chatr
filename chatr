@@ -1,12 +1,11 @@
 #!/bin/python
 
-import time, json, datetime, os, uuid, ConfigParser
+import time, json, datetime, os, uuid, configparser
 from threading import Thread
 from flask import Flask, render_template, session, request, send_from_directory, jsonify, url_for, redirect
 import flask.json
 from functools import wraps
 
-from pybloomfilter import BloomFilter
 from flask_socketio import SocketIO, emit, join_room, leave_room, \
     close_room, rooms, disconnect, send
 
@@ -16,10 +15,12 @@ from sqlalchemy_utils.types import TSVectorType
 from sqlalchemy_searchable import make_searchable
 
 from sqlalchemy.ext.declarative import DeclarativeMeta
+from sqlalchemy.ext.declarative import declared_attr
 from geoalchemy2.types import Geometry
 from geoalchemy2.functions import ST_Distance
 from geoalchemy2.elements import WKTElement, WKBElement
 from sqlalchemy.types import JSON
+from sqlalchemy.schema import Index
 from geoalchemy2.shape import to_shape
 
 from flask_oauthlib.client import OAuth, OAuthException
@@ -31,7 +32,7 @@ from flask_oauthlib.client import OAuth, OAuthException
 
 _sids = {} #user id to sid
 
-config = ConfigParser.ConfigParser()
+config = configparser.ConfigParser()
 config.read('chatr.ini')
 app = Flask(__name__, static_url_path='/')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://chatr:Admin123@localhost/chatr'
@@ -200,6 +201,16 @@ class Visit(db.Model, JsonMixin):
         return self.fro in _sids
 
 
+class Like(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    to = db.Column(db.Integer)
+    fro = db.Column(db.Integer)
+
+    @declared_attr
+    def __table_args__(cls):
+        return (Index('like_idx_%s' % cls.__tablename__, 'to', 'fro'),)
+
+
 class CityQuery(BaseQuery, SearchQueryMixin):
     pass
 
@@ -215,8 +226,7 @@ class City(db.Model, JsonMixin):
 
 @app.before_first_request
 def create_user():
-    print 'creating'
-    return
+    #return
     try:
         db.create_all()
         _create_user('admin@test.com', 'password')
@@ -256,7 +266,7 @@ def facebook_authorized():
         return 'Access denied: %s' % resp.message, 401
 
     session['oauth_token'] = (resp['access_token'], '')
-    me = facebook.get('/me?fields=id,name,email')
+    me = facebook.get('/me?fields=id,email')
     connection = Connection.query.filter_by(provider_user_id=me.data['id']).first()
 
     if not connection:
@@ -298,17 +308,48 @@ def app_logout():
     return redirect('/')
 
 
-@app.route('/api/_login')
+@app.route('/api/_login', methods=['POST'])
 def app_login():
-    user = User.query.filter(User.email == request.args.get('email')).first()
-    if user:
-        login_user(user)
+    if request.json.get('access_token'):
+        session['oauth_token'] = (request.json.get('access_token'), '')
+        me = facebook.get('/me?fields=id,email')
+        connection = Connection.query.filter_by(provider_user_id=me.data['id']).first()
+
+        if not connection:
+            user = User(
+                    email = me.data.get('email', None), #TODO: get email
+                    confirmed_at = datetime.datetime.now()
+                    )
+            db.session.add(user)
+            db.session.commit()
+
+            connection = Connection(
+                    id = user.id,
+                    provider_id = 'facebook',
+                    provider_user_id = me.data['id'],
+                    access_token = request.json['access_token'],
+                    secret = None,
+                    full_name = None,
+                    display_name = None,
+                    profile_url = None,
+                    image_url = None,
+                    rank = None)
+            db.session.add(connection)
+            db.session.commit()
+
+        session['user_id'] = connection.id
+
         return jsonify(message='ok')
     else:
-        user = _create_user(request.args.get('email'), 'password')
-        login_user(user)
-        return jsonify(message='ok')
-
+        user = User.query.filter(User.email == request.json.get('email')).first()
+        if user:
+            #TODO: verify password
+            login_user(user)
+            return jsonify(message='ok')
+        else:
+            user = _create_user(request.json.get('email'), request.json.get('password'))
+            login_user(user)
+            return jsonify(message='ok')
 
 @app.route('/api/_upload', methods=['POST'])
 @login_required
@@ -331,13 +372,19 @@ def assets(id):
     return send_from_directory('assets', id)
 
 
-BLOOM_PATH = 'visits.bloom'
+@app.route('/api/profiles/<id>/_like', methods=['POST'])
+@login_required
+def profile_like(id):
+    try:
+        user_id = int(session['user_id'])
+        like = Like(to=id,
+                fro=user_id)
+        db.session.add(like)
+        db.session.commit()
+    except:
+        pass
 
-if os.path.exists(BLOOM_PATH):
-    bf = BloomFilter.open(BLOOM_PATH)
-else:
-    bf = BloomFilter(10**7, 0.001, BLOOM_PATH)
-
+    return jsonify(message='OK')
 
 @app.route('/api/profiles', methods=['POST'], defaults = {'id': None})
 @app.route('/api/profiles/<id>', methods=['GET', 'POST'])
@@ -352,14 +399,16 @@ def profiles(id):
     if not profile and id:
         return jsonify(message='not found'), 404
     if request.method == 'GET':
-        if user_id != id and request.args and not ((user_id, id) in bf):
-            visit = Visit(to=id,
-                    fro=user_id,
-                    data=request.args,
-                    modified=datetime.datetime.now())
-            db.session.add(visit)
-            db.session.commit()
-            bf.add((user_id, id))
+        if user_id != id and request.args:
+            try:
+                visit = Visit(to=id,
+                        fro=user_id,
+                        data=request.args,
+                        modified=datetime.datetime.now())
+                db.session.add(visit)
+                db.session.commit()
+            except:
+                pass
 
         profile._public = public
         return dumps(profile)
@@ -417,6 +466,13 @@ def search():
             (Profile.dob >= datetime.datetime.now() - datetime.timedelta(days=365*ageTo)) &
             (Profile.dob <= datetime.datetime.now() - datetime.timedelta(days=365*ageFrom))
             ).filter(ST_Distance(Profile.location, pt) < int(request.args.get('dist', 50000))).offset(offset).limit(20).all()
+
+    if request.args.get('include_matched'):
+        likes = Like.query.filter((Like.fro.in_([p.id for p in profiles])) & (Like.to == user_id)).all()
+        profiles_map = {p.id: p for p in profiles}
+
+        for l in likes:
+            profiles_map[l.fro].matched = True
 
     return dumps(profiles)
 
@@ -503,7 +559,7 @@ def dist(path):
 
 if __name__ == '__main__':
     try:
-        print 'dropping'
+        pass
         #db.drop_all()
     except:
         pass

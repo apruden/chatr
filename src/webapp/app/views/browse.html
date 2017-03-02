@@ -28,33 +28,15 @@
     </div>
   </div>
 </div>
-<div class="row" ng-repeat="chunk in chunked">
-  <div class="col-md-4" ng-repeat="profile in chunk">
-    <div class="thumbnail">
-      <a ng-href="#!/profiles/{{profile.id}}">
-        <div class="img-overlay-md center-block">
-          <img ng-style="{'background-image': 'url(/api/assets/{{profile.id}}.jpg), url(http://placehold.it/200x200)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '200px', height: '200px'}">
-          <div class="thumb-overlay" ng-if="profile.online">
-            <i class="glyphicon glyphicon-signal"></i>
-          </div>
-        </div>
-      </a>
-      <div class="caption">
-        <h4>
-          <a ng-href="#!/profiles/{{profile.id}}">{{profile.username}}, {{profile.age}}, {{profile.city}}</a>
-        </h4>
-        <p>{{profile.headline}}</p>
-      </div>
-    </div>
-  </div>
-</div>
 <div class="row">
-  <div class="col-xs-12">
-    <nav aria-label="loadMore">
-      <ul class="pager">
-        <li ng-show="offset"><a href ng-click="loadMore(-1)" translate>prev</a></li>
-        <li ng-show="profiles.length === 20"><a href ng-click="loadMore(1)" translate>next</a></li>
+  <div class="col-md-8 col-xs-12 col-md-offset-2">
+    <div class="form-group stack-container">
+      <ul class="stack list-unstyled" swing-stack swing-options="swingOptions">
+          <li swing-card ng-repeat="profile in profiles"
+              swing-on-throwout="remove($index, profile, eventObject)"
+              ng-style="{'background-image': 'url(' + profile.photo.filename + ')'}">
+          </li>
       </ul>
-    </nav>
+    </div>
   </div>
 </div>

@@ -5,13 +5,17 @@
         <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate>edit</button>
       </div>
     </form>
+  </div>
+</div>
+<div class="row">
+  <div class="col-xs-12">
     <h3>{{profile.username}} - {{profile.headline}}</h3>
   </div>
 </div>
 <div class="row" ng-if="profile.photos && profile.photos.length > 0">
   <div class="col-xs-12">
     <div class="form-group">
-      <ul rn-carousel rn-carousel-index="gallery" class="carousel2" rn-carousel-controls>
+      <ul rn-carousel rn-carousel-index="gallery" rn-carousel-controls>
         <li ng-repeat="photo in profile.photos">
           <div ng-style="{'background-image': 'url(/api/assets/' + photo.filename + ')'}"  class="bgimage"></div>
         </li>

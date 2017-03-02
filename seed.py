@@ -6,6 +6,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Column, Integer, String, Unicode
 from sqlalchemy.orm import sessionmaker, configure_mappers
+
 Base = declarative_base()
 make_searchable()
 
@@ -30,7 +31,7 @@ session = Session()
 import codecs
 
 with codecs.open('data.txt', 'r', 'utf-8') as f:
-    total = 1000
+    total = 0
     acc = []
     for line in f:
         tmp = [x.strip() for x in line.split(',')]
@@ -47,9 +48,4 @@ with codecs.open('data.txt', 'r', 'utf-8') as f:
 
     session.commit()
 
-from sqlalchemy_searchable import search
-
-query = session.query(City)
-query = search(query, 'aix:*')
-
-print query.first().name
+print('done')

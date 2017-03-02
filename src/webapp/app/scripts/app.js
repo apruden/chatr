@@ -25,7 +25,8 @@ angular
     'angular-carousel',
     'ngFileUpload',
     'angular-inview',
-    'ui.router'
+    'ui.router',
+    'gajus.swing'
   ])
   .run(function($rootScope) {
     $rootScope.$on('$stateChangeSuccess', function() {
@@ -81,6 +82,12 @@ angular
         templateUrl: 'views/profile_edit.html',
         controller: 'ProfileEditCtrl'
       })
+      .state('browse', {
+        url: '/browse',
+        templateUrl: 'views/browse.html',
+        resolve: {'currentUser': currentUser},
+        controller: 'BrowseCtrl'
+      })
       .state('search', {
         url: '/search',
         templateUrl: 'views/search.html',
@@ -92,7 +99,7 @@ angular
       return $injector.get('AuthInterceptor');
     }]);
   })
-  .controller('BaseCtrl', function ($scope, $rootScope, $state, socketFactory) {
+  .controller('BaseCtrl', function ($scope, $rootScope, $state, socketFactory, Profile) {
     $scope.showNav = false;
     $scope.socket = null;
 
@@ -106,9 +113,13 @@ angular
         $scope.showNav = true;
         $scope.socket = socketFactory({prefix: ''});
         //$scope.socket.forward(['msg', 'ack']);
+        if (!$scope.profile) {
+          $scope.profile = Profile.get({id: 'me'});
+        }
       } else {
         $scope.showNav = false;
         $scope.socket = null;
+        $scope.profile = null;
       }
     });
   })
@@ -120,6 +131,14 @@ angular
         $state.go('profileCreate');
       }
     });
+
+    $scope.loginFacebook = function() {
+      FB.login(function(response){
+        $http.post('/api/_login', {access_token: response.authResponse.accessToken }, function() {
+          $state.go('search');
+        });
+      }, {scope: 'public_profile,email'});
+    };
 
     $scope.login = function (email) {
       $http.get('/api/_login?email=' + email, function() {
@@ -203,7 +222,6 @@ angular
         return Math.floor(idx/3);
       }));
     });
-    $scope.selectedLocation = $scope.query.city ? {name: $scope.query.city} : {};
 
     $scope.search = function() {
       if (!angular.equals($scope.query, currentUser.criteria)) {
@@ -218,15 +236,6 @@ angular
       });
     };
 
-    $scope.getLocation = function(q) {
-      return Cities.query({q: q}).$promise;
-    };
-
-    $scope.onSelectedLocation = function(item) {
-      $scope.query.city = item.name;
-      $scope.query.location = item.location;
-    };
-
     $scope.loadMore = function(f) {
       $scope.offset += f * 20;
       var q = angular.extend($scope.query, {offset: $scope.offset});
@@ -237,6 +246,51 @@ angular
         }));
       });
       window.scrollTo(0,0);
+    };
+  })
+  .controller('BrowseCtrl', function ($scope, Profile, Search, Criteria, currentUser) {
+    $scope.agesFrom = _.range(18, 100);
+    $scope.agesTo = _.range(18, 100);
+    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {gender: currentUser.gender ? 0 : 1, distance: 50, location: currentUser.location};
+
+    $scope.profiles = Search.query($scope.query);
+
+    $scope.search = function() {
+      if (!angular.equals($scope.query, currentUser.criteria)) {
+        Criteria.save($scope.query);
+      }
+
+      $scope.profiles = Search.query($scope.query);
+    };
+
+    $scope.loadMore = function(f) {
+      $scope.offset += f * 20;
+      var q = angular.extend($scope.query, {offset: $scope.offset});
+      $scope.profiles = Search.query(q);
+    };
+
+    $scope.swingOptions = {
+      throwOutConfidence: function(offset, element) {
+        var tmp = Math.min((1.5 * Math.abs(offset)) / element.offsetWidth, 1);
+        return tmp;
+      },
+      isThrowOut: function(offset, element, throwOutConfidence) {
+        return throwOutConfidence === 1;
+      }
+    };
+
+    $scope.remove = function(index, profile, ev) {
+      if(ev.throwDirection > 0) {
+        //like
+        Profile.like({id: profile.id});
+      }
+
+      $scope.profiles.splice(index, 1);
+      ev.target.parentNode.removeChild(ev.target);
+
+      if($scope.profiles.length === 0) {
+        $scope.loadMore();
+      }
     };
   })
   .controller('VisitCtrl', function ($scope, Visit) {
@@ -379,7 +433,9 @@ angular
     return $resource('/api/visits');
   })
   .service('Profile', function($resource) {
-    return $resource('/api/profiles/:id', {id: '@id'});
+    return $resource('/api/profiles/:id/:verb', {id: '@id', verb: '@verb'},
+        {'like': {method: 'POST', params: {'verb': '_like'}}}
+      );
   })
   .service('CachedProfile', function(Profile) {
     this.profile = null;

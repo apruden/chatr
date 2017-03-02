@@ -22,7 +22,6 @@ module.exports = function(config) {
       // bower:js
       'bower_components/jquery/dist/jquery.js',
       'bower_components/angular/angular.js',
-      'bower_components/bootstrap-sass-official/assets/javascripts/bootstrap.js',
       'bower_components/angular-animate/angular-animate.js',
       'bower_components/angular-cookies/angular-cookies.js',
       'bower_components/angular-resource/angular-resource.js',
@@ -33,12 +32,15 @@ module.exports = function(config) {
       'bower_components/angular-translate/angular-translate.js',
       'bower_components/angular-carousel/dist/angular-carousel.js',
       'bower_components/ng-file-upload/ng-file-upload.js',
+      'bower_components/socket.io-client/dist/socket.io.min.js',
       'bower_components/angular-bootstrap/ui-bootstrap-tpls.js',
       'bower_components/underscore/underscore.js',
       'bower_components/angular-inview/angular-inview.js',
       'bower_components/angular-ui-router/release/angular-ui-router.js',
       'bower_components/angular-translate-loader-static-files/angular-translate-loader-static-files.js',
       'bower_components/ng-embed/src/ng-embed.js',
+      'bower_components/bootstrap-sass/assets/javascripts/bootstrap.js',
+      'bower_components/angular-swing/dist/angular-swing.min.js',
       'bower_components/angular-mocks/angular-mocks.js',
       // endbower
       'app/scripts/**/*.js',
