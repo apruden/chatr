@@ -10,7 +10,7 @@
             <div class="img-overlay-sm">
               <img class="media-object" ng-style="{'background-image': 'url(/api/assets/{{msg.fro}}.jpg), url(http://placehold.it/200x200)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '128px', height: '128px'}">
               <div class="thumb-overlay" ng-if="msg.online">
-                <i class="glyphicon glyphicon-signal"></i>
+                <i class="fa fa-signal"></i>
               </div>
             </div>
           </a>
@@ -19,7 +19,7 @@
           <h4 class="media-heading">
             <a ng-href="#!/chat/{{msg.fro}}">
               {{msg.data.username}}
-              <span ng-if="!msg.read" class="label label-success"><i class="glyphicon glyphicon-comment"></i> <span translate>new</span></span>
+              <span ng-if="!msg.read" class="label label-success"><i class="fa fa-comment"></i> <span translate>new</span></span>
             </a>
           </h4>
           <span>{{msg.sent}}</span>

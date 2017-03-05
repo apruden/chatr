@@ -7,18 +7,20 @@
 </div>
 <div class="row" ng-repeat="chunk in chunked">
   <div class="col-md-4" ng-repeat="visit in chunk">
-    <div class="thumbnail">
+    <div class="thumbnail" ng-class="{'alert-info': visit.matched}">
       <a href="#!/profiles/{{visit.fro}}">
         <div class="img-overlay-md center-block">
           <img ng-style="{'background-image': 'url(/api/assets/{{visit.fro}}.jpg), url(http://placehold.it/200x200)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '200px', height: '200px'}">
           <div class="thumb-overlay" ng-if="visit.online">
-            <i class="glyphicon glyphicon-signal"></i>
+            <i class="fa fa-signal"></i>
           </div>
         </div>
       </a>
       <div class="caption">
         <h4>
-        <a href="#!/profiles/{{visit.fro}}">{{visit.data.username}}, {{visit.data.age}}, {{visit.data.city}} <span ng-if="!visit.read" class="label label-success"><i class="glyphicon glyphicon-eye-open"></i> <span translate>new</span></span></a>
+        <a href="#!/profiles/{{visit.fro}}">{{visit.data.username}}, {{visit.data.age}}, {{visit.data.city}} <span ng-if="!visit.read" class="label label-success"><i class="fa fa-eye"></i> <span translate>new</span></span>
+          <span ng-if="visit.matched" class="label label-success"><i class="fa fa-star"></i> <span translate>mutualMatch</span></span>
+        </a>
         </h4>
       </div>
     </div>

@@ -1,4 +1,15 @@
-<div class="row">
+<div class="row form-group" ng-show="!editSearch">
+  <div class="col-xs-12">
+    <div class="pull-right">
+      <button class="btn btn-default" ng-click="refresh()"><i class="fa fa-refresh"></i></button>
+      <button class="btn btn-primary" ng-click="editSearch = !editSearch"><i class="fa fa-pencil"></i></button>
+    </div>
+    <h6>
+      Age {{query.dobFrom}} to {{query.dobTo}}, {{query.distance}} km
+    </h6>
+  </div>
+</div>
+<div class="row" ng-show="editSearch">
   <div class="col-xs-12">
     <form novalidate name="searchForm" class="form" ng-submit="searchForm.$valid && search()">
       <div class="row">
@@ -9,13 +20,18 @@
         </div>
         <div class="form-group col-md-2 col-xs-4" ng-class="{'has-error': searchForm.dobFrom.$invalid}">
           <label for="dobFrom" translate>age</label>
-          <select name="dobFrom" ng-model="query.dobFrom" ng-options="d for d in agesFrom" class="form-control" required>
+          <select name="dobFrom" ng-model="query.dobFrom" ng-options="d for d in agesFrom" class="form-control" required ng-change="query.dobTo = query.dobFrom > query.dobTo ? query.dobFrom : query.dobTo">
           </select>
         </div>
         <div class="form-group col-md-2 col-xs-4" ng-class="{'has-error': searchForm.dobTo.$invalid}">
           <label for="dobTo" translate>to</label>
-          <select name="dobTo" ng-model="query.dobTo" ng-options="d for d in agesTo" class="form-control" required>
+          <select name="dobTo" ng-model="query.dobTo" ng-options="d for d in agesTo" class="form-control" required ng-change="query.dobFrom = query.dobFrom > query.dobTo ? query.dobTo : query.dobFrom">
           </select>
+        </div>
+      </div>
+      <div class="col-xs-12">
+        <div class="form-group col-md-2">
+          <button class="btn btn-primary" type="submit" translate>save</button>
         </div>
       </div>
     </form>
@@ -35,7 +51,7 @@
         <div class="img-overlay-md center-block">
           <img ng-style="{'background-image': 'url(/api/assets/{{profile.id}}.jpg), url(http://placehold.it/200x200)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '200px', height: '200px'}">
           <div class="thumb-overlay" ng-if="profile.online">
-            <i class="glyphicon glyphicon-signal"></i>
+            <i class="fa fa-signal"></i>
           </div>
         </div>
       </a>

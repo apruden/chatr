@@ -10,6 +10,7 @@
     <!-- bower:css -->
     <link rel="stylesheet" href="bower_components/angular-carousel/dist/angular-carousel.css" />
     <link rel="stylesheet" href="bower_components/ng-embed/src/ng-embed.css" />
+    <link rel="stylesheet" href="bower_components/components-font-awesome/css/font-awesome.css" />
     <!-- endbower -->
     <!-- endbuild -->
     <!-- build:css(.tmp) styles/main.css -->
@@ -52,15 +53,15 @@
                     <img ng-style="{'background-image': 'url(/api/assets/' + profile.id + '.jpg), url(http://placehold.it/20x20)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '32px', height: '32px'}" class="img-circle">
                   </a>
                   <ul class="dropdown-menu" uib-dropdown-menu>
-                    <li><a href="/api/_logout"><i class="glyphicon glyphicon-log-out"></i> <span translate>logout</span></a></li>
-                    <li><a ng-href="#!/profiles/me"><i class="glyphicon glyphicon-user"></i> <span translate>profile</a></li>
+                    <li><a ng-href="#!/profiles/me"><i class="fa fa-user"></i> <span translate>profile</a></li>
+                    <li><a href="/api/_logout"><i class="fa fa-sign-out"></i> <span translate>logout</span></a></li>
                   </ul>
                 </span>
                 <ul class="nav navbar-nav navbar-collapse pull-right" ng-if="showNav">
-                  <li><a ng-href="#!/visitors"><i class="glyphicon glyphicon-eye-open"></i> <span class="hidden-xs" translate>visitors</a></li>
-                  <li><a ng-href="#!/inbox"><i class="glyphicon glyphicon-inbox"></i> <span class="hidden-xs" translate>inbox</a></li>
-                  <li><a href="#!/search"><i class="glyphicon glyphicon-search"></i> <span class="hidden-xs" translate>search</a></li>
-                  <li><a href="#!/browse"><i class="glyphicon glyphicon-heart"></i> <span class="hidden-xs" translate>browse</a></li>
+                  <li><a ng-href="#!/visitors"><i class="fa fa-eye"></i> <span class="hidden-xs" translate>visitors</a></li>
+                  <li><a ng-href="#!/inbox"><i class="fa fa-inbox"></i> <span class="hidden-xs" translate>inbox</a></li>
+                  <li><a href="#!/search"><i class="fa fa-search"></i> <span class="hidden-xs" translate>search</a></li>
+                  <li><a href="#!/browse"><i class="fa fa-heart"></i> <span class="hidden-xs" translate>browse</a></li>
                 </ul>
               </div>
           </div>

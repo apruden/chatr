@@ -1,6 +1,6 @@
 #!/bin/python
 
-import time, json, datetime, os, uuid, configparser
+import time, json, datetime, os, uuid, configparser, argparse
 from threading import Thread
 from flask import Flask, render_template, session, request, send_from_directory, jsonify, url_for, redirect
 import flask.json
@@ -29,6 +29,10 @@ from flask_oauthlib.client import OAuth, OAuthException
 #import eventlet.debug
 #eventlet.debug.hub_blocking_detection(True)
 
+parser = argparse.ArgumentParser()
+parser.add_argument('--init', action='store_true')
+
+cli_args = parser.parse_args()
 
 _sids = {} #user id to sid
 
@@ -194,6 +198,7 @@ class Visit(db.Model, JsonMixin):
     modified = db.Column(db.DateTime)
     data = db.Column(JSON)
     read = db.Column(db.Boolean)
+    matched = db.Column(db.Boolean)
 
     @property
     def online(self):
@@ -205,10 +210,6 @@ class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     to = db.Column(db.Integer)
     fro = db.Column(db.Integer)
-
-    @declared_attr
-    def __table_args__(cls):
-        return (Index('like_idx_%s' % cls.__tablename__, 'to', 'fro'),)
 
 
 class CityQuery(BaseQuery, SearchQueryMixin):
@@ -222,16 +223,6 @@ class City(db.Model, JsonMixin):
     country = db.Column(db.String(255))
     location = db.Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
     search_vector = db.Column(TSVectorType('name'))
-
-
-@app.before_first_request
-def create_user():
-    #return
-    try:
-        db.create_all()
-        _create_user('admin@test.com', 'password')
-    except:
-        pass
 
 
 def _create_user(email, password):
@@ -351,6 +342,7 @@ def app_login():
             login_user(user)
             return jsonify(message='ok')
 
+
 @app.route('/api/_upload', methods=['POST'])
 @login_required
 def upload():
@@ -379,6 +371,21 @@ def profile_like(id):
         user_id = int(session['user_id'])
         like = Like(to=id,
                 fro=user_id)
+
+        if request.json['matched']:
+            visit = Visit(to=id,
+                    fro=user_id,
+                    data=request.json['fro'],
+                    modified=datetime.datetime.now(),
+                    matched=True)
+            visit_rel = Visit(to=user_id,
+                    fro=id,
+                    data=request.json['to'],
+                    modified=datetime.datetime.now(),
+                    matched=True)
+            db.session.add(visit)
+            db.session.add(visit_rel)
+
         db.session.add(like)
         db.session.commit()
     except:
@@ -558,10 +565,13 @@ def dist(path):
 
 
 if __name__ == '__main__':
-    try:
-        pass
-        #db.drop_all()
-    except:
-        pass
+    if cli_args.init:
+        try:
+            db.drop_all()
+        except:
+            pass
+
+        db.create_all()
+        _create_user('admin@test.com', 'password')
 
     socketio.run(app)

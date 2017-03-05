@@ -134,7 +134,7 @@ angular
 
     $scope.loginFacebook = function() {
       FB.login(function(response){
-        $http.post('/api/_login', {access_token: response.authResponse.accessToken }, function() {
+        $http.post('/api/_login', {access_token: response.authResponse.accessToken }).then(function() {
           $state.go('search');
         });
       }, {scope: 'public_profile,email'});
@@ -202,6 +202,7 @@ angular
     };
   })
   .controller('InboxCtrl', function ($scope, Chat) {
+    $scope.offset = 0;
     $scope.messages = Chat.query();
 
     $scope.loadMore = function(f) {
@@ -210,8 +211,10 @@ angular
       window.scrollTo(0,0);
     };
   })
-  .controller('SearchCtrl', function ($scope, Search, Cities, Criteria, currentUser) {
+  .controller('SearchCtrl', function ($scope, $state, Search, Cities, Criteria, currentUser) {
+    $scope.editSearch = false;
     $scope.chunked = [];
+    $scope.offset = 0;
 
     $scope.agesFrom = _.range(18, 100);
     $scope.agesTo = _.range(18, 100);
@@ -223,11 +226,16 @@ angular
       }));
     });
 
+    $scope.refresh = function() {
+      $state.reload();
+    };
+
     $scope.search = function() {
       if (!angular.equals($scope.query, currentUser.criteria)) {
         Criteria.save($scope.query);
       }
 
+      $scope.editSearch = false;
       $scope.profiles = Search.query($scope.query);
       $scope.profiles.$promise.then(function(profiles) {
         $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
@@ -248,25 +256,33 @@ angular
       window.scrollTo(0,0);
     };
   })
-  .controller('BrowseCtrl', function ($scope, Profile, Search, Criteria, currentUser) {
+  .controller('BrowseCtrl', function ($scope, $state, Profile, Search, Criteria, currentUser) {
+    $scope.offset = 0;
+    $scope.editSearch = false;
     $scope.agesFrom = _.range(18, 100);
     $scope.agesTo = _.range(18, 100);
     $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {gender: currentUser.gender ? 0 : 1, distance: 50, location: currentUser.location};
 
-    $scope.profiles = Search.query($scope.query);
+    $scope.profiles = Search.query($scope.query, {include_matched: true});
 
-    $scope.search = function() {
+    $scope.refresh = function() {
+      $state.reload();
+    };
+
+    $scope.search = function(searchForm) {
+      $scope.editSearch = false;
+
       if (!angular.equals($scope.query, currentUser.criteria)) {
         Criteria.save($scope.query);
       }
 
-      $scope.profiles = Search.query($scope.query);
+      $scope.profiles = Search.query($scope.query, {include_matched: true});
     };
 
     $scope.loadMore = function(f) {
       $scope.offset += f * 20;
       var q = angular.extend($scope.query, {offset: $scope.offset});
-      $scope.profiles = Search.query(q);
+      $scope.profiles = Search.query(q, {include_matched: true});
     };
 
     $scope.swingOptions = {
@@ -282,14 +298,33 @@ angular
     $scope.remove = function(index, profile, ev) {
       if(ev.throwDirection > 0) {
         //like
-        Profile.like({id: profile.id});
+        var data = {id: profile.id};
+
+        if (profile.matched) {
+          data = {
+            id: profile.id,
+            to: {
+              username: profile.username,
+              age: profile.age,
+              city: profile.city
+            },
+            fro: {
+              username: currentUser.username,
+              age: currentUser.age,
+              city: currentUser.city
+            },
+            matched: profile.matched
+          };
+        }
+
+        Profile.like(data);
       }
 
       $scope.profiles.splice(index, 1);
       ev.target.parentNode.removeChild(ev.target);
 
       if($scope.profiles.length === 0) {
-        $scope.loadMore();
+        $scope.loadMore(1);
       }
     };
   })
