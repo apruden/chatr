@@ -20,14 +20,18 @@ from geoalchemy2.types import Geometry
 from geoalchemy2.functions import ST_Distance
 from geoalchemy2.elements import WKTElement, WKBElement
 from sqlalchemy.types import JSON
-from sqlalchemy.schema import Index
+from sqlalchemy.schema import Index, UniqueConstraint
 from geoalchemy2.shape import to_shape
 
 from flask_oauthlib.client import OAuth, OAuthException
+from PIL import Image
+from resizeimage import resizeimage
 
 
-#import eventlet.debug
-#eventlet.debug.hub_blocking_detection(True)
+
+
+import eventlet.debug
+eventlet.debug.hub_blocking_detection(True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--init', action='store_true')
@@ -199,6 +203,7 @@ class Visit(db.Model, JsonMixin):
     data = db.Column(JSON)
     read = db.Column(db.Boolean)
     matched = db.Column(db.Boolean)
+    __table_args__ = (Index('ix_visit', 'to', 'fro'),)
 
     @property
     def online(self):
@@ -210,6 +215,7 @@ class Like(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     to = db.Column(db.Integer)
     fro = db.Column(db.Integer)
+    __table_args__ = (UniqueConstraint('to', 'fro'),)
 
 
 class CityQuery(BaseQuery, SearchQueryMixin):
@@ -358,8 +364,7 @@ def cities():
     return dumps(City.query.search(request.args.get('q')).limit(10).all())
 
 
-@app.route('/api/assets/<id>')
-@login_required
+@app.route('/assets/<id>')
 def assets(id):
     return send_from_directory('assets', id)
 
@@ -368,11 +373,12 @@ def assets(id):
 @login_required
 def profile_like(id):
     try:
+        id = int(id)
         user_id = int(session['user_id'])
-        like = Like(to=id,
-                fro=user_id)
+        like = Like(to=id, fro=user_id)
+        db.session.add(like)
 
-        if request.json['matched']:
+        if request.json.get('matched'):
             visit = Visit(to=id,
                     fro=user_id,
                     data=request.json['fro'],
@@ -385,11 +391,17 @@ def profile_like(id):
                     matched=True)
             db.session.add(visit)
             db.session.add(visit_rel)
+            try:
+                if user_id in _sids:
+                    socketio.emit('feed', {visit: 1}, room=_sids[user_id])
+                if user_id in _sids:
+                    socketio.emit('feed', {visit: 1}, room=_sids[id])
+            except:
+                pass
 
-        db.session.add(like)
         db.session.commit()
-    except:
-        pass
+    except Exception as e:
+        println(e)
 
     return jsonify(message='OK')
 
@@ -399,9 +411,13 @@ def profile_like(id):
 def profiles(id):
     public = True
     user_id = int(session['user_id'])
+
     if id == 'me':
         id = user_id
         public = False
+    else:
+        id = int(id) if id else None
+
     profile = Profile.query.get(id) if id else None
     if not profile and id:
         return jsonify(message='not found'), 404
@@ -414,6 +430,7 @@ def profiles(id):
                         modified=datetime.datetime.now())
                 db.session.add(visit)
                 db.session.commit()
+                socketio.emit('feed', {visit: 1}, room=_sids[id])
             except:
                 pass
 
@@ -422,6 +439,16 @@ def profiles(id):
     elif request.method == 'POST':
         request.json.pop('online', None)
         request.json.pop('age', None)
+        request.json.pop('picture', None)
+
+        try:
+            pic = next(x for x in request.json.get('photos', []) if x.get('isMain', False))
+            is_new = pic['isNew']
+        except StopIteration:
+            pass
+
+        for x in request.json.get('photos', []):
+            x.pop('isNew', None)
 
         if not profile:
             profile = Profile(id=user_id)
@@ -432,18 +459,15 @@ def profiles(id):
 
         db.session.commit()
 
-        main_photo = 'assets/%s.jpg' % (profile.id,)
-
-        if os.path.exists(main_photo):
-            os.unlink(main_photo)
-
-        try:
-            pic = next(x['filename'] for x in profile.photos if x.get('isMain', False))
-
-            if pic:
-                os.symlink('%s' % (pic,), main_photo)
-        except StopIteration:
-            pass
+        if pic and is_new:
+           with open('assets/%s' % (pic['filename'],), 'r+b') as f:
+                with Image.open(f) as image:
+                    main_photo = 'assets/%s_s.jpg' % (profile.id,)
+                    cover = resizeimage.resize_cover(image, [50, 50])
+                    cover.save(main_photo, image.format)
+                    main_photo = 'assets/%s_l.jpg' % (profile.id,)
+                    cover = resizeimage.resize_cover(image, [200, 200])
+                    cover.save(main_photo, image.format)
 
         profile._public = public
         return dumps(profile)
@@ -457,6 +481,14 @@ def updateCriteria():
     db.session.commit()
 
     return jsonify(message='ok')
+
+@app.route('/api/feed')
+@login_required
+def feed():
+    user_id = int(session['user_id'])
+    msg = Message.query.filter_by(to=user_id, read=None).count()
+    visit = Visit.query.filter_by(to=user_id, read=False).count()
+    return jsonify(msg=msg, visit=visit)
 
 
 @app.route('/api/search')
@@ -475,6 +507,7 @@ def search():
             ).filter(ST_Distance(Profile.location, pt) < int(request.args.get('dist', 50000))).offset(offset).limit(20).all()
 
     if request.args.get('include_matched'):
+        user_id = int(session['user_id'])
         likes = Like.query.filter((Like.fro.in_([p.id for p in profiles])) & (Like.to == user_id)).all()
         profiles_map = {p.id: p for p in profiles}
 

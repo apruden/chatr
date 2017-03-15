@@ -50,7 +50,7 @@
       <ul class="stack list-unstyled" swing-stack swing-options="swingOptions">
           <li swing-card ng-repeat="profile in profiles"
               swing-on-throwout="remove($index, profile, eventObject)"
-              ng-style="{'background-image': 'url(/api/assets/' + profile.id + '.jpg)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat'}">
+              ng-style="{'background-image': 'url(/assets/{{ profile.picture }})', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat'}">
           </li>
       </ul>
     </div>

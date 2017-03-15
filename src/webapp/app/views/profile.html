@@ -17,7 +17,7 @@
     <div class="form-group">
       <ul rn-carousel rn-carousel-index="gallery" rn-carousel-controls>
         <li ng-repeat="photo in profile.photos">
-          <div ng-style="{'background-image': 'url(/api/assets/' + photo.filename + ')'}"  class="bgimage"></div>
+          <div ng-style="{'background-image': 'url(/assets/{{photo.filename}})'}"  class="bgimage"></div>
         </li>
       </ul>
     </div>

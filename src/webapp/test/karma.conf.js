@@ -41,6 +41,7 @@ module.exports = function(config) {
       'bower_components/angular-swing/dist/angular-swing.min.js',
       'bower_components/ng-embed/src/ng-embed.js',
       'bower_components/ng-file-upload/ng-file-upload.js',
+      'bower_components/moment/moment.js',
       'bower_components/angular-mocks/angular-mocks.js',
       // endbower
       'app/scripts/**/*.js',

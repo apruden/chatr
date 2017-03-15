@@ -50,7 +50,7 @@
                 <a class="navbar-brand hidden-xs" href="#!/">chatr</a>
                 <span uib-dropdown class="navbar-brand pull-right" ng-if="showNav">
                   <a href uib-dropdown-toggle class="navbar-link">
-                    <img ng-style="{'background-image': 'url(/api/assets/' + profile.id + '.jpg), url(http://placehold.it/20x20)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '32px', height: '32px'}" class="img-circle">
+                    <img ng-style="{'background-image': 'url(/assets/' + profile.id + '_s.jpg)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '32px', height: '32px'}" class="img-circle">
                   </a>
                   <ul class="dropdown-menu" uib-dropdown-menu>
                     <li><a ng-href="#!/profiles/me"><i class="fa fa-user"></i> <span translate>profile</a></li>
@@ -58,8 +58,8 @@
                   </ul>
                 </span>
                 <ul class="nav navbar-nav navbar-collapse pull-right" ng-if="showNav">
-                  <li><a ng-href="#!/visitors"><i class="fa fa-eye"></i> <span class="hidden-xs" translate>visitors</a></li>
-                  <li><a ng-href="#!/inbox"><i class="fa fa-inbox"></i> <span class="hidden-xs" translate>inbox</a></li>
+                  <li><a ng-href="#!/visitors"><i class="fa fa-eye"></i> <span class="hidden-xs" translate>visitors</span> <span ng-if="feed.visit" class="badge">{{feed.visit}}</span></a></li>
+                  <li><a ng-href="#!/inbox"><i class="fa fa-inbox"></i> <span class="hidden-xs" translate>inbox</span> <span ng-if="feed.msg" class="badge">{{feed.msg}}</span></a></li>
                   <li><a href="#!/search"><i class="fa fa-search"></i> <span class="hidden-xs" translate>search</a></li>
                   <li><a href="#!/browse"><i class="fa fa-heart"></i> <span class="hidden-xs" translate>browse</a></li>
                 </ul>
@@ -96,6 +96,7 @@
     <script src="bower_components/angular-swing/dist/angular-swing.min.js"></script>
     <script src="bower_components/ng-embed/src/ng-embed.js"></script>
     <script src="bower_components/ng-file-upload/ng-file-upload.js"></script>
+    <script src="bower_components/moment/moment.js"></script>
     <!-- endbower -->
     <!-- endbuild -->
 

@@ -99,9 +99,13 @@ angular
       return $injector.get('AuthInterceptor');
     }]);
   })
-  .controller('BaseCtrl', function ($scope, $rootScope, $state, socketFactory, Profile) {
+  .controller('BaseCtrl', function ($scope, $rootScope, $state, socketFactory, Profile, Feed) {
     $scope.showNav = false;
     $scope.socket = null;
+    $scope.feed = {
+      msg: 0,
+      visit: 0
+    };
 
     $rootScope.$on('$stateChangeError', function() {
       $scope.showNav = false;
@@ -111,10 +115,25 @@ angular
     $rootScope.$on('$stateChangeStart', function(ev, next) {
       if (next.name !== 'home' && next.name !== 'profileCreate') {
         $scope.showNav = true;
-        $scope.socket = socketFactory({prefix: ''});
-        //$scope.socket.forward(['msg', 'ack']);
+
+        if (!$scope.socket) {
+          $scope.socket = socketFactory({prefix: ''});
+
+          $scope.socket.on('feed', function(data) {
+            $scope.feed.visit += data.visit;
+          });
+
+          $scope.socket.on('msg', function(data) {
+            if(!$state.is('chat', {id: data.fro})) {
+              console.log('>>>', $state.current, data);
+              $scope.feed.msg += 1;
+            }
+          });
+        }
+
         if (!$scope.profile) {
           $scope.profile = Profile.get({id: 'me'});
+          $scope.feed = Feed.get();
         }
       } else {
         $scope.showNav = false;
@@ -122,6 +141,7 @@ angular
         $scope.profile = null;
       }
     });
+
   })
   .controller('MainCtrl', function ($scope, $state, $http, Profile) {
     Profile.get({id: 'me'}).$promise.then(function() {
@@ -135,7 +155,13 @@ angular
     $scope.loginFacebook = function() {
       FB.login(function(response){
         $http.post('/api/_login', {access_token: response.authResponse.accessToken }).then(function() {
-          $state.go('search');
+          Profile.get({id: 'me'}).$promise.then(function() {
+            $state.go('search');
+          }).catch(function(e) {
+            if (e.status === 404) {
+              $state.go('profileCreate');
+            }
+          });
         });
       }, {scope: 'public_profile,email'});
     };
@@ -212,19 +238,24 @@ angular
     };
   })
   .controller('SearchCtrl', function ($scope, $state, Search, Cities, Criteria, currentUser) {
+    function onSearchSuccess(profiles) {
+      $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
+        return Math.floor(idx/3);
+      }));
+    }
+
     $scope.editSearch = false;
     $scope.chunked = [];
     $scope.offset = 0;
 
     $scope.agesFrom = _.range(18, 100);
     $scope.agesTo = _.range(18, 100);
-    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {gender: currentUser.gender ? 0 : 1, distance: 50, location: currentUser.location};
-    $scope.profiles = Search.query($scope.query);
-    $scope.profiles.$promise.then(function(profiles) {
-      $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
-        return Math.floor(idx/3);
-      }));
-    });
+    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {
+      gender: currentUser.gender ? 0 : 1,
+      distance: 50,
+      location: currentUser.location
+    };
+    $scope.profiles = Search.query($scope.query, onSearchSuccess);
 
     $scope.refresh = function() {
       $state.reload();
@@ -236,34 +267,37 @@ angular
       }
 
       $scope.editSearch = false;
-      $scope.profiles = Search.query($scope.query);
-      $scope.profiles.$promise.then(function(profiles) {
-        $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
-          return Math.floor(idx/3);
-        }));
-      });
+      $scope.profiles = Search.query($scope.query, onSearchSuccess);
     };
 
     $scope.loadMore = function(f) {
       $scope.offset += f * 20;
       var q = angular.extend($scope.query, {offset: $scope.offset});
-      $scope.profiles = Search.query(q);
-      $scope.profiles.$promise.then(function(profiles) {
-        $scope.chunked = _.toArray(_.groupBy(profiles, function(el, idx) {
-          return Math.floor(idx/3);
-        }));
-      });
+      $scope.profiles = Search.query(q, onSearchSuccess);
       window.scrollTo(0,0);
     };
+
   })
   .controller('BrowseCtrl', function ($scope, $state, Profile, Search, Criteria, currentUser) {
+    function onSearchSuccess(profiles) {
+      profiles.forEach(function(profile) {
+        profile.picture = profiles.photos.filter(function(p) {
+          return p.isMain;
+        })[0];
+      });
+    }
+
     $scope.offset = 0;
     $scope.editSearch = false;
     $scope.agesFrom = _.range(18, 100);
     $scope.agesTo = _.range(18, 100);
-    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {gender: currentUser.gender ? 0 : 1, distance: 50, location: currentUser.location};
+    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {
+      gender: currentUser.gender ? 0 : 1,
+      distance: 50,
+      location: currentUser.location
+    };
 
-    $scope.profiles = Search.query($scope.query, {include_matched: true});
+    $scope.profiles = Search.query(angular.extend({}, $scope.query, {include_matched: true}), onSearchSuccess);
 
     $scope.refresh = function() {
       $state.reload();
@@ -276,13 +310,13 @@ angular
         Criteria.save($scope.query);
       }
 
-      $scope.profiles = Search.query($scope.query, {include_matched: true});
+      $scope.profiles = Search.query(angular.extend({}, $scope.query, {include_matched: true}), onSearchSuccess);
     };
 
     $scope.loadMore = function(f) {
       $scope.offset += f * 20;
       var q = angular.extend($scope.query, {offset: $scope.offset});
-      $scope.profiles = Search.query(q, {include_matched: true});
+      $scope.profiles = Search.query(q, {include_matched: true}, onSearchSuccess);
     };
 
     $scope.swingOptions = {
@@ -329,23 +363,19 @@ angular
     };
   })
   .controller('VisitCtrl', function ($scope, Visit) {
-    $scope.offset = 0;
-    $scope.chunked = [];
-    $scope.visits = Visit.query();
-    $scope.visits.$promise.then(function(visits) {
+    function onLoadSuccess (visits) {
       $scope.chunked = _.toArray(_.groupBy(visits, function(el, idx) {
         return Math.floor(idx/3);
       }));
-    });
+    }
+
+    $scope.offset = 0;
+    $scope.chunked = [];
+    $scope.visits = Visit.query({}, onLoadSuccess);
 
     $scope.loadMore = function(f) {
       $scope.offset += f * 20;
-      $scope.visits = Visit.query({offset: $scope.offset});
-      $scope.visits.$promise.then(function(visits) {
-        $scope.chunked = _.toArray(_.groupBy(visits, function(el, idx) {
-          return Math.floor(idx/3);
-        }));
-      });
+      $scope.visits = Visit.query({offset: $scope.offset}, onLoadSuccess);
       window.scrollTo(0,0);
     };
   })
@@ -383,10 +413,12 @@ angular
     };
   })
   .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, Profile, Upload, Cities) {
+    var yearTo = moment().subtract(18, 'years').year();
+    var yearFrom = moment().subtract(99, 'years').year();
     $scope.genders = [{label: 'male', value: 0}, {label: 'female', value: 1}];
-    $scope.dobYears = _.range(2000, 1916, -1);
-    $scope.dobMonths = _.range(1, 12);
-    $scope.dobDays = _.range(1,31);
+    $scope.dobYears = _.range(yearTo, yearFrom, -1);
+    $scope.dobMonths = _.range(1, 12 + 1);
+    $scope.dobDays = _.range(1, 31 + 1);
     $scope.profile = Profile.get({id: 'me'});
     $scope.profile.$promise.then(function() {
       var dob = $scope.profile.dob ? new Date($scope.profile.dob) : null;
@@ -409,14 +441,12 @@ angular
 
         if ($scope.profile.photos.length === 0) {
           resp.data.isMain = true;
+          resp.data.isNew = true;
         }
 
         $scope.profile.photos.push(resp.data);
       }, function (resp) {
         console.log('Error status: ' + resp.status);
-      }, function (evt) {
-        var progressPercentage = parseInt(100.0 * evt.loaded / evt.total);
-        console.log('progress: ' + progressPercentage + '% ' + evt.config.data.file.name);
       });
     };
 
@@ -447,8 +477,23 @@ angular
       item.isMain = item.isMain && !item.isPrivate;
     };
 
-    $scope.saveProfile = function() {
+    $scope.saveProfile = function(form) {
       $scope.profile.dob = [$scope.year, $scope.month, $scope.day].join('-');
+      var age = moment().diff(moment($scope.profile.dob), 'years');
+      var ageFrom = Math.max(18, age - 5);
+      var ageTo = Math.min(99, age + 5);
+
+      if (age < 18) {
+        form.year.$setValidity('required', false);
+        form.month.$setValidity('required', false);
+        form.day.$setValidity('required', false);
+        return;
+      }
+
+      if(!$scope.profile.criteria) {
+        $scope.profile.criteria = { gender: $scope.profile.gender ? 0 : 1, distance: 50, location: $scope.profile.location, dobFrom: ageFrom, dobTo: ageTo };
+      }
+
       $scope.profile.$save(function() {
         $state.go('profile', {id: 'me'});
       });
@@ -466,6 +511,9 @@ angular
   })
   .service('Visit', function($resource) {
     return $resource('/api/visits');
+  })
+  .service('Feed', function($resource) {
+    return $resource('/api/feed');
   })
   .service('Profile', function($resource) {
     return $resource('/api/profiles/:id/:verb', {id: '@id', verb: '@verb'},
