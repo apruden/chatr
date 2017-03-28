@@ -5,7 +5,7 @@
       <button class="btn btn-primary" ng-click="editSearch = !editSearch"><i class="fa fa-pencil"></i></button>
     </div>
     <h6>
-      Age {{query.dobFrom}} to {{query.dobTo}}, {{query.distance}} km
+      {{ 'searchCriteria' | translate: '{dobFrom: query.dobFrom, dobTo: query.dobTo, distance: query.distance}' }}
     </h6>
   </div>
 </div>

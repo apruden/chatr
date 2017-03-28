@@ -31,7 +31,7 @@ from resizeimage import resizeimage
 
 
 import eventlet.debug
-eventlet.debug.hub_blocking_detection(True)
+#eventlet.debug.hub_blocking_detection(True)
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--init', action='store_true')
@@ -139,11 +139,6 @@ class Connection(db.Model, JsonMixin):
     rank = db.Column(db.Integer)
 
 
-class Criteria(db.Model, JsonMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    query = db.Column(db.String(255))
-
-
 class Profile(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(255), unique=True)
@@ -155,6 +150,7 @@ class Profile(db.Model, JsonMixin):
     photos = db.Column(JSON)
     criteria = db.Column(JSON)
     city = db.Column(db.String(255))
+    preferences = db.Column(JSON)
     _public = True
 
     @property
@@ -406,7 +402,7 @@ def profile_like(id):
     return jsonify(message='OK')
 
 @app.route('/api/profiles', methods=['POST'], defaults = {'id': None})
-@app.route('/api/profiles/<id>', methods=['GET', 'POST'])
+@app.route('/api/profiles/<id>', methods=['GET', 'POST', 'DELETE'])
 @login_required
 def profiles(id):
     public = True
@@ -421,6 +417,7 @@ def profiles(id):
     profile = Profile.query.get(id) if id else None
     if not profile and id:
         return jsonify(message='not found'), 404
+
     if request.method == 'GET':
         if user_id != id and request.args:
             try:
@@ -443,7 +440,7 @@ def profiles(id):
 
         try:
             pic = next(x for x in request.json.get('photos', []) if x.get('isMain', False))
-            is_new = pic['isNew']
+            is_new = pic.get('isNew')
         except StopIteration:
             pass
 
@@ -471,6 +468,12 @@ def profiles(id):
 
         profile._public = public
         return dumps(profile)
+    elif request.method == 'DELETE':
+        db.session.delete(profile)
+        User.query.filter_by(id = profile.id).delete()
+        Connection.query.filter_by(id = profile.id).delete()
+        db.session.commit()
+        return jsonify(message='ok')
 
 
 @app.route('/api/profiles/me/criteria', methods=['POST'])

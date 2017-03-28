@@ -1,18 +1,19 @@
-<form>
+<form name="settingsForm" ng-submit="save()">
   <div class="form-group">
     <label for="username" translate>username</label>
-    <input name="username" class="form-control" type="text">
+    <input name="username" class="form-control" type="text" ng-model="profile.username" required>
   </div>
   <div class="form-group">
-    <label for="email" translate>email</label>
-    <input name="email" class="form-control" type="text">
+    <label for="preferredLang" translate>preferredLang</label>
+    <select name="preferredLang" ng-model="profile.preferences.preferredLang" ng-options="d.value as d.label | translate for d in availableLang" class="form-control" required></select>
   </div>
   <div class="form-group">
-    <label for="password" translate>password</label>
-    <input name="password" class="form-control" type="password">
+    <button class="btn btn-primary" translate>save</button>
   </div>
   <div class="form-group">
-    <label for="repassword" translate>repassword</label>
-    <input name="repassword" class="form-control" type="password">
+    <a href ng-click="toggleDelete()" translate>deletePrompt</a>
+  </div>
+  <div class="form-group" ng-if="showDeleteAccount">
+    <button class="btn btn-danger" translate ng-click="deleteAccount()">deleteAccount</button>
   </div>
 </form>

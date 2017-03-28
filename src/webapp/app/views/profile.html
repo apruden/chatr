@@ -46,7 +46,7 @@
     </div>
     <form name="sendMessageForm" ng-submit="sendMessage()" ng-show="canSend">
       <div class="form-group">
-        <textarea id="message" ng-model="message" class="form-control" name="message"></textarea>
+        <textarea id="message" ng-model="message" class="form-control" name="message" placeholder="{{ 'writeMessagePh' | translate}}"></textarea>
       </div>
       <button class="btn btn-primary pull-right" type="submit" translate>send</button>
     </form>

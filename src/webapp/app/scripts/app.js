@@ -34,7 +34,14 @@ angular
     });
   })
   .config(function ($stateProvider, $urlRouterProvider, $httpProvider, $translateProvider) {
-    $translateProvider.useStaticFilesLoader({prefix: 'i18n/', suffix: '.json'}).preferredLanguage('en').useSanitizeValueStrategy('escape');
+    $translateProvider.useStaticFilesLoader({prefix: 'i18n/', suffix: '.json'}).useSanitizeValueStrategy('escape').fallbackLanguage(['en']).registerAvailableLanguageKeys(['en', 'fr', 'de', 'es'], {
+      'en_*': 'en',
+      'fr_*': 'fr',
+      'es_*': 'es',
+      'de_*': 'de',
+      '*': 'en'
+    });
+    $translateProvider.determinePreferredLanguage();
 
     function currentUser (CachedProfile) {
       var profile = CachedProfile.getProfile();
@@ -65,6 +72,11 @@ angular
         url: '/visitors',
         templateUrl: 'views/visits.html',
         controller: 'VisitCtrl'
+      })
+      .state('settings', {
+        url: '/settings',
+        templateUrl: 'views/settings.html',
+        controller: 'SettingsCtrl'
       })
       .state('profile', {
         url: '/profiles/:id',
@@ -125,7 +137,6 @@ angular
 
           $scope.socket.on('msg', function(data) {
             if(!$state.is('chat', {id: data.fro})) {
-              console.log('>>>', $state.current, data);
               $scope.feed.msg += 1;
             }
           });
@@ -235,6 +246,30 @@ angular
       $scope.offset += f * 20;
       $scope.messages = Chat.query({offset: $scope.offset});
       window.scrollTo(0,0);
+    };
+  })
+  .controller('SettingsCtrl', function ($scope, $translate, Profile) {
+    $scope.profile = Profile.get({id: 'me'});
+    $scope.availableLang = [
+      {value: "en", label: "english"},
+      {value: "es", label: "espanol"},
+      {value: "fr", label: "francais"},
+      {value: "de", label: "deutsch"}
+    ];
+    $scope.showDeleteAccount = false;
+    $scope.toggleDelete = function() {
+      $scope.showDeleteAccount = !$scope.showDeleteAccount;
+    };
+
+    $scope.deleteAccount = function() {
+      $scope.profile.$delete(function() {
+        window.location = '/api/_logout';
+      });
+    };
+
+    $scope.save = function() {
+      $scope.profile.$save();
+      $translate.use($scope.profile.preferences.preferredLang);
     };
   })
   .controller('SearchCtrl', function ($scope, $state, Search, Cities, Criteria, currentUser) {
@@ -436,7 +471,6 @@ angular
         url: '/api/_upload',
         data: {file: file}
       }).then(function (resp) {
-        console.log('Success ' + resp.config.data.file.name + 'uploaded. Response: ' + resp.data);
         $scope.profile.photos = $scope.profile.photos || [];
 
         if ($scope.profile.photos.length === 0) {

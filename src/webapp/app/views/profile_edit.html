@@ -7,7 +7,7 @@
       </div>
       <div ng-show="!profile.id" class="form-group" ng-class="{'has-error': profileForm.gender.$invalid}">
         <label for="gender" translate>gender</label>
-        <select name="gender" ng-model="profile.gender" ng-options="d.value as d.label for d in genders" class="form-control" required></select>
+        <select name="gender" ng-model="profile.gender" ng-options="d.value as d.label | translate for d in genders" class="form-control" required></select>
       </div>
       <div ng-show="!profile.id" class="form-group">
         <label for="dob" translate>dob</label>
@@ -39,7 +39,7 @@
       <div class="row">
         <div class="col-md-3" ng-repeat="photo in profile.photos">
           <div class="thumbnail">
-            <img ng-src="/assets/{{photo.filename}}" alt="">
+            <img ng-src="/assets/{{photo.filename}}">
             <div class="caption">
               <div class="radio">
                 <label>
@@ -57,7 +57,7 @@
         </div>
       </div>
       <div class="form-group" ng-show="profile.photos.length < 5" ng-class="{'has-error': profileForm.picFile.$invalid}">
-        <label for="picFile">uploadPhoto</label>
+        <label for="picFile" translate>uploadPhoto</label>
         <input id="picFile" type="file" name="picFile" ng-required="profile.photos.length === 0"
                                         class="form-control"
                                         ng-model="file"
