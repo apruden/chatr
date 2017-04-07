@@ -2,14 +2,19 @@
   <div class="col-xs-12">
     <form class="pull-right">
       <div class="form-group">
-        <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate>edit</button>
+        <button ng-if="canEdit" class="btn btn-primary" ng-click="editProfile()" translate><i class="fa fa-pencil"></i></button>
       </div>
     </form>
   </div>
 </div>
 <div class="row">
   <div class="col-xs-12">
-    <h3>{{profile.username}} - {{profile.headline}}</h3>
+    <div class="form-group">
+      <h4>{{profile.headline}}
+        <br>
+        <small>{{profile.username}}, {{profile.age}}, {{profile.city}}</small>
+      </h4>
+    </div>
   </div>
 </div>
 <div class="row" ng-if="profile.photos && profile.photos.length > 0">
@@ -25,14 +30,20 @@
 </div>
 <div class="row">
   <div class="col-xs-12">
-    <h4 translate>description</h4>
     <div class="well">
-    <dl class="dl-horizontal">
-      <dt translate>age</dt>
-      <dd>{{profile.age}}</dd>
-      <dt translate>city</dt>
-      <dd>{{profile.city}}</dd>
-    </dl>
+      <div class="row">
+        <div class="col-xs-6" ng-repeat="(name, value) in profile.data">
+          <dl class="dl-horizontal">
+            <dt>{{ name | translate }}</dt>
+            <dd>{{ value | translate }}</dd>
+          </dl>
+        </div>
+      </div>
+    </div>
+    <div class="well">
+      <h4>
+      <span class="label label-info" ng-repeat="interest in profile.interests"><i class="fa fa-pencil"></i>{{ interest }} </span>
+      </h4>
     </div>
     <h4 translate>about</h4>
     <div ng-bind-html="profile.about | embed"></div>

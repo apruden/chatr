@@ -26,7 +26,8 @@ angular
     'ngFileUpload',
     'angular-inview',
     'ui.router',
-    'gajus.swing'
+    'gajus.swing',
+    'ui.select'
   ])
   .run(function($rootScope) {
     $rootScope.$on('$stateChangeSuccess', function() {
@@ -111,7 +112,7 @@ angular
       return $injector.get('AuthInterceptor');
     }]);
   })
-  .controller('BaseCtrl', function ($scope, $rootScope, $state, socketFactory, Profile, Feed) {
+  .controller('BaseCtrl', function ($scope, $rootScope, $state, $translate, socketFactory, Profile, Feed) {
     $scope.showNav = false;
     $scope.socket = null;
     $scope.feed = {
@@ -144,6 +145,11 @@ angular
 
         if (!$scope.profile) {
           $scope.profile = Profile.get({id: 'me'});
+          $scope.profile.$promise.then(function() {
+            if($scope.profile.preferences) {
+              $translate.use($scope.profile.preferences.preferredLang);
+            }
+          });
           $scope.feed = Feed.get();
         }
       } else {
@@ -448,6 +454,16 @@ angular
     };
   })
   .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, Profile, Upload, Cities) {
+    $scope.dataOptions = {
+      "status": ["single", "married", "commonLaw", "divorced", "widow"],
+      "children": ["older", "yes", "no"],
+      "smoke": ["yes", "no"],
+      "drink": ["yes", "no"],
+      "religion": ["none", "christian", "jewish", "muslim", "catholic", "budhist", "other"],
+      "car": ["yes", "no"]
+    };
+    $scope.interests = ["gree", "blue", "red"];
+
     var yearTo = moment().subtract(18, 'years').year();
     var yearFrom = moment().subtract(99, 'years').year();
     $scope.genders = [{label: 'male', value: 0}, {label: 'female', value: 1}];
@@ -462,6 +478,7 @@ angular
       $scope.day = dob ? dob.getUTCDate() : null;
       $scope.selectedLocation = $scope.profile.city ? {name: $scope.profile.city} : null;
       $scope.profile.photos = $scope.profile.photos || [];
+      $scope.profile.interests = $scope.profile.interests || [];
     }).catch(function() {
       $scope.profile.photos = [];
     });

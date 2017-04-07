@@ -2,10 +2,10 @@
   <div class="col-xs-12">
     <div class="pull-right">
       <button class="btn btn-default" ng-click="refresh()"><i class="fa fa-refresh"></i></button>
-      <button class="btn btn-primary" ng-click="editSearch = !editSearch"><i class="fa fa-pencil"></i></button>
+      <button class="btn btn-default" ng-click="editSearch = !editSearch"><i class="fa fa-pencil"></i></button>
     </div>
     <h6>
-      {{ 'searchCriteria' | translate: '{dobFrom: query.dobFrom, dobTo: query.dobTo, distance: query.distance}' }}
+      {{ 'searchCriteria' | translate: query }}
     </h6>
   </div>
 </div>

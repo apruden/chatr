@@ -151,6 +151,8 @@ class Profile(db.Model, JsonMixin):
     criteria = db.Column(JSON)
     city = db.Column(db.String(255))
     preferences = db.Column(JSON)
+    data = db.Column(JSON)
+    interests = db.Column(JSON)
     _public = True
 
     @property

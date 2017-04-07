@@ -36,6 +36,22 @@
         <label for="about" translate>about</label>
         <textarea id="about" name="about" ng-model="profile.about" class="form-control" required></textarea>
       </div>
+      <div class="form-group">
+        <label for="data" translate>data</label>
+        <div class="row">
+          <div class="col-xs-6" ng-repeat="(name, values) in dataOptions">
+            <label>{{name}}</label>
+            <select ng-model="profile.data[name]" ng-options="d as d | translate for d in values" class="form-control"></select>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="interests" translate>interests</label>
+        <ui-select theme="bootstrap" ng-model="profile.interests" multiple tagging tagging-label="false">
+          <ui-select-match>{{$item}}</ui-select-match>
+          <ui-select-choices repeat="entry in interests | filter:$select.search">{{entry}}</ui-select-choices>
+        </ui-select>
+      </div>
       <div class="row">
         <div class="col-md-3" ng-repeat="photo in profile.photos">
           <div class="thumbnail">

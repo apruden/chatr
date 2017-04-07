@@ -529,8 +529,9 @@ ul[rn-carousel] {
 }
 
 .rn-carousel-control.rn-carousel-control-prev:before {
-    font-family: 'Glyphicons Halflings';
-    content: "\e132";
+    font-family: 'FontAwesome';
+    content: "\f0d9";
+    font-size: 2em;
 }
 
 .second-nav {
@@ -539,8 +540,9 @@ ul[rn-carousel] {
 }
 
 .rn-carousel-control.rn-carousel-control-next:before {
-    font-family: 'Glyphicons Halflings';
-    content: "\e131"; 
+    font-family: 'FontAwesome';
+    content: "\f0da";
+    font-size: 2em;
 }
 
 .navbar-chat {
