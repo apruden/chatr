@@ -453,16 +453,18 @@ angular
       $scope.canSend = false;
     };
   })
-  .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, Profile, Upload, Cities) {
+  .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, Profile, Upload, Cities, Interests) {
     $scope.dataOptions = {
       "status": ["single", "married", "commonLaw", "divorced", "widow"],
       "children": ["older", "yes", "no"],
       "smoke": ["yes", "no"],
       "drink": ["yes", "no"],
       "religion": ["none", "christian", "jewish", "muslim", "catholic", "budhist", "other"],
-      "car": ["yes", "no"]
     };
-    $scope.interests = ["gree", "blue", "red"];
+    $scope.interests = [];
+    $scope.getInterests = function(q) {
+      $scope.interests = Interests.query({q: q});
+    };
 
     var yearTo = moment().subtract(18, 'years').year();
     var yearFrom = moment().subtract(99, 'years').year();
@@ -529,8 +531,8 @@ angular
     };
 
     $scope.saveProfile = function(form) {
-      $scope.profile.dob = [$scope.year, $scope.month, $scope.day].join('-');
-      var age = moment().diff(moment($scope.profile.dob), 'years');
+      $scope.profile.dob = [$scope.year, ("0" + $scope.month).slice(-2), ("0" + $scope.day).slice(-2)].join('-');
+      var age = moment().diff(moment($scope.profile.dob + 'T00:00:00Z'), 'years');
       var ageFrom = Math.max(18, age - 5);
       var ageTo = Math.min(99, age + 5);
 
@@ -556,6 +558,9 @@ angular
   })
   .service('Cities', function($resource) {
     return $resource('/api/cities');
+  })
+  .service('Interests', function($resource) {
+    return $resource('/api/interests');
   })
   .service('Chat', function($resource) {
     return $resource('/api/chats/:id', {id: '@id'});

@@ -40,13 +40,13 @@
         </div>
       </div>
     </div>
-    <div class="well">
-      <h4>
-      <span class="label label-info" ng-repeat="interest in profile.interests"><i class="fa fa-pencil"></i>{{ interest }} </span>
-      </h4>
-    </div>
     <h4 translate>about</h4>
     <div ng-bind-html="profile.about | embed"></div>
+    <h5>
+      <span ng-repeat="interest in profile.interests">
+        <span class="label label-info text-lowercase">{{ interest }}</span>
+      </span>
+    </h5>
   </div>
 </div>
 <div class="row" ng-show="!canEdit">

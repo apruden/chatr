@@ -19,11 +19,17 @@ class City(Base):
     location = Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
     search_vector = Column(TSVectorType('name'))
 
+class Interest(Base):
+    __tablename__ = 'interest'
+    name = Column(Unicode(64), primary_key=True)
+    search_vector = Column(TSVectorType('name'))
 
 engine = create_engine('postgresql+psycopg2://chatr:Admin123@localhost/chatr', echo=True)
 configure_mappers()
 City.__table__.drop(engine)
 City.__table__.create(engine)
+Interest.__table__.drop(engine)
+Interest.__table__.create(engine)
 Base.metadata.create_all(engine)
 Session = sessionmaker(bind=engine)
 session = Session()

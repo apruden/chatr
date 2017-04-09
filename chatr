@@ -229,6 +229,19 @@ class City(db.Model, JsonMixin):
     search_vector = db.Column(TSVectorType('name'))
 
 
+class InterestQuery(BaseQuery, SearchQueryMixin):
+    pass
+
+
+class Interest(db.Model):
+    query_class = InterestQuery
+    name = db.Column(db.Unicode(64), primary_key=True)
+    search_vector = db.Column(TSVectorType('name'))
+
+    def _json(self):
+        return self.name
+
+
 def _create_user(email, password):
     user = User(email=email, password=password)
     db.session.add(user)
@@ -361,6 +374,10 @@ def upload():
 def cities():
     return dumps(City.query.search(request.args.get('q')).limit(10).all())
 
+@app.route('/api/interests')
+@login_required
+def interests():
+    return dumps(Interest.query.search(request.args.get('q')).limit(10).all())
 
 @app.route('/assets/<id>')
 def assets(id):
@@ -456,6 +473,7 @@ def profiles(id):
         for k, v in request.json.items():
             setattr(profile, k, v)
 
+
         db.session.commit()
 
         if pic and is_new:
@@ -469,6 +487,15 @@ def profiles(id):
                     cover.save(main_photo, image.format)
 
         profile._public = public
+
+        try:
+            if profile.interests:
+                for i in profile.interests:
+                    db.session.merge(Interest(name=i))
+                db.session.commit()
+        except:
+            pass
+
         return dumps(profile)
     elif request.method == 'DELETE':
         db.session.delete(profile)
