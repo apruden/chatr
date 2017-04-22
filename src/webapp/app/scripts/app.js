@@ -146,8 +146,8 @@ angular
         if (!$scope.profile) {
           $scope.profile = Profile.get({id: 'me'});
           $scope.profile.$promise.then(function() {
-            if($scope.profile.preferences) {
-              $translate.use($scope.profile.preferences.preferredLang);
+            if($scope.profile.data.preferences) {
+              $translate.use($scope.profile.data.preferences.preferredLang);
             }
           });
           $scope.feed = Feed.get();
@@ -171,7 +171,7 @@ angular
 
     $scope.loginFacebook = function() {
       FB.login(function(response){
-        $http.post('/api/_login', {access_token: response.authResponse.accessToken }).then(function() {
+        $http.post('/api/_login', {access_token: response.authResponse.accessToken , provider: 'facebook'}).then(function() {
           Profile.get({id: 'me'}).$promise.then(function() {
             $state.go('search');
           }).catch(function(e) {
@@ -181,6 +181,25 @@ angular
           });
         });
       }, {scope: 'public_profile,email'});
+    };
+
+    $scope.loginGoogle = function() {
+      GoogleAuth = gapi.auth2.getAuthInstance();
+      GoogleAuth.signIn().then(function() {
+        var user = GoogleAuth.currentUser.get();
+        var tok = user.getAuthResponse();
+
+        $http.post('/api/_login', {access_token: tok.access_token, provider: 'google'}).then(function() {
+          Profile.get({id: 'me'}).$promise.then(function() {
+            $state.go('search');
+          }).catch(function(e) {
+            console.log(e);
+            if (e.status === 404) {
+              $state.go('profileCreate');
+            }
+          });
+        });
+      });
     };
 
     $scope.login = function (email) {
@@ -243,6 +262,13 @@ angular
         });
       });
     };
+
+    $scope.showBlock = false;
+
+    $scope.block = function() {
+      Profile.block({id: $scope.to.id});
+      $state.go('inbox');
+    };
   })
   .controller('InboxCtrl', function ($scope, Chat) {
     $scope.offset = 0;
@@ -275,7 +301,7 @@ angular
 
     $scope.save = function() {
       $scope.profile.$save();
-      $translate.use($scope.profile.preferences.preferredLang);
+      $translate.use($scope.profile.data.preferences.preferredLang);
     };
   })
   .controller('SearchCtrl', function ($scope, $state, Search, Cities, Criteria, currentUser) {
@@ -291,7 +317,7 @@ angular
 
     $scope.agesFrom = _.range(18, 100);
     $scope.agesTo = _.range(18, 100);
-    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {
+    $scope.query = currentUser.data.criteria ? angular.copy(currentUser.data.criteria) : {
       gender: currentUser.gender ? 0 : 1,
       distance: 50,
       location: currentUser.location
@@ -303,7 +329,7 @@ angular
     };
 
     $scope.search = function() {
-      if (!angular.equals($scope.query, currentUser.criteria)) {
+      if (!angular.equals($scope.query, currentUser.data.criteria)) {
         Criteria.save($scope.query);
       }
 
@@ -322,7 +348,7 @@ angular
   .controller('BrowseCtrl', function ($scope, $state, Profile, Search, Criteria, currentUser) {
     function onSearchSuccess(profiles) {
       profiles.forEach(function(profile) {
-        profile.picture = profiles.photos.filter(function(p) {
+        profile.picture = profile.data.photos.filter(function(p) {
           return p.isMain;
         })[0];
       });
@@ -332,7 +358,7 @@ angular
     $scope.editSearch = false;
     $scope.agesFrom = _.range(18, 100);
     $scope.agesTo = _.range(18, 100);
-    $scope.query = currentUser.criteria ? angular.copy(currentUser.criteria) : {
+    $scope.query = currentUser.data.criteria ? angular.copy(currentUser.data.criteria) : {
       gender: currentUser.gender ? 0 : 1,
       distance: 50,
       location: currentUser.location
@@ -347,7 +373,7 @@ angular
     $scope.search = function(searchForm) {
       $scope.editSearch = false;
 
-      if (!angular.equals($scope.query, currentUser.criteria)) {
+      if (!angular.equals($scope.query, currentUser.data.criteria)) {
         Criteria.save($scope.query);
       }
 
@@ -479,10 +505,11 @@ angular
       $scope.month = dob ? dob.getUTCMonth() + 1 : null;
       $scope.day = dob ? dob.getUTCDate() : null;
       $scope.selectedLocation = $scope.profile.city ? {name: $scope.profile.city} : null;
-      $scope.profile.photos = $scope.profile.photos || [];
-      $scope.profile.interests = $scope.profile.interests || [];
+      $scope.profile.data.photos = $scope.profile.data.photos || [];
+      $scope.profile.data.interests = $scope.profile.data.interests || [];
     }).catch(function() {
-      $scope.profile.photos = [];
+      $scope.profile.data = {};
+      $scope.profile.data.photos = [];
     });
 
     $scope.upload = function (file) {
@@ -490,14 +517,14 @@ angular
         url: '/api/_upload',
         data: {file: file}
       }).then(function (resp) {
-        $scope.profile.photos = $scope.profile.photos || [];
+        $scope.profile.data.photos = $scope.profile.data.photos || [];
 
-        if ($scope.profile.photos.length === 0) {
+        if ($scope.profile.data.photos.length === 0) {
           resp.data.isMain = true;
           resp.data.isNew = true;
         }
 
-        $scope.profile.photos.push(resp.data);
+        $scope.profile.data.photos.push(resp.data);
       }, function (resp) {
         console.log('Error status: ' + resp.status);
       });
@@ -513,7 +540,7 @@ angular
     };
 
     $scope.onMainChanged = function(item) {
-      $scope.profile.photos.forEach(function(p) {
+      $scope.profile.data.photos.forEach(function(p) {
         if (p !== item) {
           p.isMain = false;
         } else {
@@ -523,7 +550,7 @@ angular
     };
 
     $scope.deletePhoto = function(idx) {
-      $scope.profile.photos.splice(idx, 1);
+      $scope.profile.data.photos.splice(idx, 1);
     };
 
     $scope.onPrivateChanged = function(item) {
@@ -543,8 +570,8 @@ angular
         return;
       }
 
-      if(!$scope.profile.criteria) {
-        $scope.profile.criteria = { gender: $scope.profile.gender ? 0 : 1, distance: 50, location: $scope.profile.location, dobFrom: ageFrom, dobTo: ageTo };
+      if(!$scope.profile.data.criteria) {
+        $scope.profile.data.criteria = { gender: $scope.profile.gender ? 0 : 1, distance: 50, location: $scope.profile.location, dobFrom: ageFrom, dobTo: ageTo };
       }
 
       $scope.profile.$save(function() {
@@ -573,7 +600,9 @@ angular
   })
   .service('Profile', function($resource) {
     return $resource('/api/profiles/:id/:verb', {id: '@id', verb: '@verb'},
-        {'like': {method: 'POST', params: {'verb': '_like'}}}
+        {'like': {method: 'POST', params: {'verb': '_like'}},
+          'block': {method: 'POST', params: {'verb': '_block'}},
+          'unblock': {method: 'POST', params: {'verb': '_unblock'}}}
       );
   })
   .service('CachedProfile', function(Profile) {
@@ -584,7 +613,8 @@ angular
         return this.profile;
       }
 
-      return Profile.get({id: 'me'});
+      this.profile = Profile.get({id: 'me'});
+      return this.profile;
     };
 
     return this;

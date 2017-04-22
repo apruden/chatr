@@ -2,7 +2,7 @@
   <div class="navbar navbar-default navbar-fixed-top second-nav" role="navigation">
     <div class="container">
       <div class="collapse navbar-collapse navbar-header">
-        <a class="navbar-brand navbar-chat" ng-href="#!/profiles/{{to.id}}"><img ng-style="{'background-image': 'url(/assets/{{to.id}}_s.jpg)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '50px', height: '50px', display: 'inline-block'}"> {{to.username}}, {{to.age}}, {{to.city}}</a>
+        <a class="navbar-brand navbar-chat" ng-href="#!/profiles/{{to.id}}"><img ng-style="{'background-image': 'url(/assets/' + to.id + '_s.jpg)', 'background-size': 'cover', 'background-position':'center center', 'background-repeat': 'no-repeat', 'width': '50px', height: '50px', display: 'inline-block'}"> {{to.username}}, {{to.age}}, {{to.city}}</a>
       </div>
     </div>
   </div>
@@ -38,8 +38,12 @@
     <form ng-submit="send()">
       <div class="form-group">
         <textarea class="form-control" ng-model="body" placeholder="Type a message ..."></textarea>
+        <a href ng-click="showBlock = true"><span translate>block</span>?</a>
       </div>
-      <button type="submit" class="btn btn-primary pull-right" translate>send</button>
+      <div class="form-group pull-right">
+        <button type="button" ng-show="showBlock" class="btn btn-danger" ng-click="block()"><i class="fa fa-ban"></i> <span translate>block</span></button>
+        <button type="submit" class="btn btn-primary" translate>send</button>
+      </div>
     </form>
   </div>
 </div>

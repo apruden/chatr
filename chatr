@@ -19,19 +19,20 @@ from sqlalchemy.ext.declarative import declared_attr
 from geoalchemy2.types import Geometry
 from geoalchemy2.functions import ST_Distance
 from geoalchemy2.elements import WKTElement, WKBElement
-from sqlalchemy.types import JSON
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.schema import Index, UniqueConstraint
 from geoalchemy2.shape import to_shape
 
 from flask_oauthlib.client import OAuth, OAuthException
 from PIL import Image
 from resizeimage import resizeimage
-
-
+from sqlalchemy.orm.attributes import flag_modified
 
 
 import eventlet.debug
 #eventlet.debug.hub_blocking_detection(True)
+
+from sqlalchemy.exc import IntegrityError
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--init', action='store_true')
@@ -50,6 +51,8 @@ app.config['SECRET_KEY'] = 'secret!'
 
 FACEBOOK_APP_ID = config.get('facebook', 'app_id')
 FACEBOOK_APP_SECRET = config.get('facebook', 'app_secret')
+GOOGLE_APP_ID = config.get('google', 'app_id')
+GOOGLE_APP_SECRET = config.get('google', 'app_secret')
 
 oauth = OAuth(app)
 
@@ -63,6 +66,18 @@ facebook = oauth.remote_app(
     access_token_url='/oauth/access_token',
     access_token_method='GET',
     authorize_url='https://www.facebook.com/dialog/oauth'
+)
+
+google = oauth.remote_app(
+    'google',
+    consumer_key=GOOGLE_APP_ID,
+    consumer_secret=GOOGLE_APP_SECRET,
+    request_token_params={'scope': 'email profile'},
+    base_url='https://people.googleapis.com',
+    request_token_url=None,
+    access_token_method='POST',
+    access_token_url='https://accounts.google.com/o/oauth2/token',
+    authorize_url='https://accounts.google.com/o/oauth2/auth',
 )
 
 socketio = SocketIO(app)
@@ -125,9 +140,12 @@ class User(db.Model, JsonMixin):
     password = db.Column(db.String(255))
     confirmed_at = db.Column(db.DateTime())
 
+    __table_args__ = (Index('ix_user_email', 'email'),)
+
 
 class Connection(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer)
     provider_id = db.Column(db.String(255))
     provider_user_id = db.Column(db.String(255))
     access_token = db.Column(db.String(255))
@@ -138,22 +156,24 @@ class Connection(db.Model, JsonMixin):
     image_url = db.Column(db.String(512))
     rank = db.Column(db.Integer)
 
+    __table_args__ = (Index('ix_connection_user_id', 'user_id'),
+            Index('ix_connection_provider_user_id', 'provider_user_id'))
+
 
 class Profile(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(255), unique=True)
+    username = db.Column(db.String(255))
     gender = db.Column(db.Integer)
     location = db.Column(Geometry(geometry_type='POINT', srid=4326)) # SRID=4326;POINT(0.00 0.00)
     dob = db.Column(db.Date)
     headline = db.Column(db.Text)
     about = db.Column(db.Text)
-    photos = db.Column(JSON)
-    criteria = db.Column(JSON)
     city = db.Column(db.String(255))
-    preferences = db.Column(JSON)
-    data = db.Column(JSON)
-    interests = db.Column(JSON)
+    data = db.Column(JSONB)
+    latestSeen = db.Column(db.DateTime)
     _public = True
+
+    __table_args__ = (Index('ix_profile_search', 'gender', 'location', 'dob', 'latestSeen'),)
 
     @property
     def online(self):
@@ -172,7 +192,7 @@ class Profile(db.Model, JsonMixin):
 
         if self._public:
             res.pop('dob', None)
-            res['photos'] = [p for p in self.photos if not p.get('isPrivate', False)] if self.photos else []
+            res['data']['photos'] = [p for p in self.data.get('photos', []) if not p.get('isPrivate', False)]
 
         return res
 
@@ -181,11 +201,14 @@ class Message(db.Model, JsonMixin):
     id = db.Column(db.Integer, primary_key=True)
     a = db.Column(db.Integer)
     b = db.Column(db.Integer)
-    data = db.Column(JSON)
+    data = db.Column(JSONB)
     sent = db.Column(db.DateTime)
     to = db.Column(db.Integer)
     fro = db.Column(db.Integer)
     read = db.Column(db.DateTime)
+
+    __table_args__ = (Index('ix_message_a_b', 'a', 'b'),
+            Index('ix_message_to_read', 'to', 'read'))
 
     @property
     def online(self):
@@ -194,14 +217,14 @@ class Message(db.Model, JsonMixin):
 
 
 class Visit(db.Model, JsonMixin):
-    id = db.Column(db.Integer, primary_key=True)
-    to = db.Column(db.Integer)
-    fro = db.Column(db.Integer)
+    to = db.Column(db.Integer, primary_key=True)
+    fro = db.Column(db.Integer, primary_key=True)
     modified = db.Column(db.DateTime)
-    data = db.Column(JSON)
+    data = db.Column(JSONB)
     read = db.Column(db.Boolean)
     matched = db.Column(db.Boolean)
-    __table_args__ = (Index('ix_visit', 'to', 'fro'),)
+
+    __table_args__ = (Index('ix_visit', 'to', 'read'),)
 
     @property
     def online(self):
@@ -210,10 +233,13 @@ class Visit(db.Model, JsonMixin):
 
 
 class Like(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    to = db.Column(db.Integer)
-    fro = db.Column(db.Integer)
-    __table_args__ = (UniqueConstraint('to', 'fro'),)
+    to = db.Column(db.Integer, primary_key=True)
+    fro = db.Column(db.Integer, primary_key=True)
+
+
+class Blocking(db.Model):
+    to = db.Column(db.Integer, primary_key=True)
+    fro = db.Column(db.Integer, primary_key=True)
 
 
 class CityQuery(BaseQuery, SearchQueryMixin):
@@ -249,66 +275,6 @@ def _create_user(email, password):
     return user
 
 
-@app.route('/login')
-def login():
-    callback = url_for(
-        'facebook_authorized',
-        next=request.args.get('next') or request.referrer or None,
-        _external=True
-    )
-
-    return facebook.authorize(callback=callback)
-
-
-@app.route('/login/authorized')
-def facebook_authorized():
-    resp = facebook.authorized_response()
-
-    if resp is None:
-        return 'Access denied: reason=%s error=%s' % (
-            request.args['error_reason'],
-            request.args['error_description']
-        ), 401
-
-    if isinstance(resp, OAuthException):
-        return 'Access denied: %s' % resp.message, 401
-
-    session['oauth_token'] = (resp['access_token'], '')
-    me = facebook.get('/me?fields=id,email')
-    connection = Connection.query.filter_by(provider_user_id=me.data['id']).first()
-
-    if not connection:
-        user = User(
-                email = me.data.get('email', None), #TODO: get email
-                confirmed_at = datetime.datetime.now()
-                )
-        db.session.add(user)
-        db.session.commit()
-
-        connection = Connection(
-                id = user.id,
-                provider_id = 'facebook',
-                provider_user_id = me.data['id'],
-                access_token = resp['access_token'],
-                secret = None,
-                full_name = me.data['name'],
-                display_name = me.data['name'],
-                profile_url = None,
-                image_url = None,
-                rank = None)
-        db.session.add(connection)
-        db.session.commit()
-
-    session['user_id'] = connection.id
-
-    return redirect(url_for('dist'))
-
-
-@facebook.tokengetter
-def get_facebook_oauth_token():
-    return session.get('oauth_token')
-
-
 @app.route('/api/_logout')
 @login_required
 def app_logout():
@@ -319,21 +285,32 @@ def app_logout():
 @app.route('/api/_login', methods=['POST'])
 def app_login():
     if request.json.get('access_token'):
-        session['oauth_token'] = (request.json.get('access_token'), '')
-        me = facebook.get('/me?fields=id,email')
+        provider = request.json.get('provider')
+        if provider == 'facebook':
+            session['oauth_token'] = (request.json.get('access_token'), '')
+            me = facebook.get('/me?fields=id,email')
+        elif provider == 'google':
+            session['oauth_token'] = (request.json.get('access_token'), '')
+            me = google.get('/v1/people/me')
+            me.data['id'] = me.data['resourceName']
+            me.data['email'] = next((x for x in me.data.get('emailAddresses', [])), {'value': None})['value']
+        else:
+            raise Exception('invalid provider')
+
         connection = Connection.query.filter_by(provider_user_id=me.data['id']).first()
 
         if not connection:
-            user = User(
-                    email = me.data.get('email', None), #TODO: get email
-                    confirmed_at = datetime.datetime.now()
-                    )
-            db.session.add(user)
-            db.session.commit()
+            user = User.query.filter(User.email == me.data.get('email')).first()
+
+            if not user:
+                user = User(email = me.data.get('email'), #TODO: get email
+                        confirmed_at = datetime.datetime.now())
+                db.session.add(user)
+                db.session.commit()
 
             connection = Connection(
-                    id = user.id,
-                    provider_id = 'facebook',
+                    user_id = user.id,
+                    provider_id = provider,
                     provider_user_id = me.data['id'],
                     access_token = request.json['access_token'],
                     secret = None,
@@ -345,10 +322,11 @@ def app_login():
             db.session.add(connection)
             db.session.commit()
 
-        session['user_id'] = connection.id
+        session['user_id'] = connection.user_id
 
         return jsonify(message='ok')
     else:
+
         user = User.query.filter(User.email == request.json.get('email')).first()
         if user:
             #TODO: verify password
@@ -358,6 +336,16 @@ def app_login():
             user = _create_user(request.json.get('email'), request.json.get('password'))
             login_user(user)
             return jsonify(message='ok')
+
+
+@facebook.tokengetter
+def get_facebook_oauth_token():
+    return session.get('oauth_token')
+
+
+@google.tokengetter
+def get_google_oauth_token():
+    return session.get('oauth_token')
 
 
 @app.route('/api/_upload', methods=['POST'])
@@ -382,6 +370,32 @@ def interests():
 @app.route('/assets/<id>')
 def assets(id):
     return send_from_directory('assets', id)
+
+
+@app.route('/api/profiles/<id>/_block', methods=['POST'])
+@login_required
+def profile_block(id):
+    user_id = int(session['user_id'])
+    blocking = Blocking(to=user_id, fro=int(id))
+    db.session.add(blocking)
+
+    a = int(id)
+    b = user_id
+    (a,b) = (a,b) if a < b else (b,a)
+    Message.query.filter_by(a=a, b=b).delete()
+
+    db.session.commit()
+
+    return jsonify(message='ok')
+
+
+@app.route('/api/profiles/<id>/_unblock', methods=['POST'])
+@login_required
+def profile_unblock(id):
+    user_id = int(session['user_id'])
+    Blocking.query.get(to=user_id, fro=int(id)).delete()
+    db.session.commit()
+    return jsonify(message='ok')
 
 
 @app.route('/api/profiles/<id>/_like', methods=['POST'])
@@ -458,12 +472,12 @@ def profiles(id):
         request.json.pop('picture', None)
 
         try:
-            pic = next(x for x in request.json.get('photos', []) if x.get('isMain', False))
+            pic = next(x for x in request.json.get('data', {}).get('photos', []) if x.get('isMain', False))
             is_new = pic.get('isNew')
         except StopIteration:
             pass
 
-        for x in request.json.get('photos', []):
+        for x in request.json.get('data', {}).get('photos', []):
             x.pop('isNew', None)
 
         if not profile:
@@ -488,19 +502,19 @@ def profiles(id):
 
         profile._public = public
 
-        try:
-            if profile.interests:
-                for i in profile.interests:
-                    db.session.merge(Interest(name=i))
-                db.session.commit()
-        except:
-            pass
+        if profile.data.get('interests'):
+            for i in profile.data.get('interests', []):
+                try:
+                    db.session.add(Interest(name=i))
+                    db.session.commit()
+                except IntegrityError as e:
+                    db.session.rollback()
 
         return dumps(profile)
     elif request.method == 'DELETE':
         db.session.delete(profile)
         User.query.filter_by(id = profile.id).delete()
-        Connection.query.filter_by(id = profile.id).delete()
+        Connection.query.filter_by(user_id = profile.id).delete()
         db.session.commit()
         return jsonify(message='ok')
 
@@ -509,7 +523,8 @@ def profiles(id):
 @login_required
 def updateCriteria():
     profile = Profile.query.get(int(session['user_id']))
-    profile.criteria = request.json
+    profile.data['criteria'] = request.json
+    flag_modified(profile, 'data')
     db.session.commit()
 
     return jsonify(message='ok')
@@ -536,11 +551,13 @@ def search():
             (Profile.gender == int(request.args.get('gender', 0))) &
             (Profile.dob >= datetime.datetime.now() - datetime.timedelta(days=365*ageTo)) &
             (Profile.dob <= datetime.datetime.now() - datetime.timedelta(days=365*ageFrom))
-            ).filter(ST_Distance(Profile.location, pt) < int(request.args.get('dist', 50000))).offset(offset).limit(20).all()
+            ).filter(ST_Distance(Profile.location, pt) < int(request.args.get('dist', 50000))).order_by(Profile.latestSeen).offset(offset).limit(20).all()
 
     if request.args.get('include_matched'):
         user_id = int(session['user_id'])
-        likes = Like.query.filter((Like.fro.in_([p.id for p in profiles])) & (Like.to == user_id)).all()
+        likes = Like.query.filter(
+                (Like.fro.in_([p.id for p in profiles])) &
+                (Like.to == user_id)).all()
         profiles_map = {p.id: p for p in profiles}
 
         for l in likes:
@@ -593,12 +610,16 @@ def visits():
 @socketio.on('msg')
 def sio_send_message(message):
     msg = Message(**message)
-    db.session.add(msg)
-    db.session.commit()
+    blocking = Blocking.query.filter_by(to=msg.to, fro=msg.fro).first() #TODO: cache
 
-    if message['to'] in _sids:
-        message['id'] = msg.id
-        emit('msg', message, room=_sids[message['to']])
+    if not blocking:
+        #TODO: remove blocking if originator starts chat again
+        db.session.add(msg)
+        db.session.commit()
+
+        if message['to'] in _sids:
+            message['id'] = msg.id
+            emit('msg', message, room=_sids[message['to']])
 
 
 @socketio.on('ack')
@@ -615,7 +636,11 @@ def sio_ack_message(ack):
 @socketio.on('connect')
 def sio_connect_handler():
     if 'user_id' in session:
-        _sids[int(session['user_id'])] = request.sid
+        user_id = int(session['user_id'])
+        db.session.query(Profile).filter(Profile.id == user_id).update(
+                { Profile.latestSeen: datetime.datetime.now() })
+        db.session.commit()
+        _sids[user_id] = request.sid
 
 
 @socketio.on('disconnect')
