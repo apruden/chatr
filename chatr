@@ -1,6 +1,6 @@
 #!/bin/python
 
-import time, json, datetime, os, uuid, configparser, argparse
+import time, json, datetime, os, uuid, configparser, argparse, logging
 from threading import Thread
 from flask import Flask, render_template, session, request, send_from_directory, jsonify, url_for, redirect
 import flask.json
@@ -34,6 +34,9 @@ import eventlet.debug
 
 from sqlalchemy.exc import IntegrityError
 
+
+logger = logging.getLogger('chatr')
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--init', action='store_true')
 
@@ -43,7 +46,18 @@ _sids = {} #user id to sid
 
 config = configparser.ConfigParser()
 config.read('chatr.ini')
-app = Flask(__name__, static_url_path='/')
+
+
+class CustomFlask(Flask):
+    jinja_options = Flask.jinja_options.copy()
+    jinja_options.update(dict(
+        block_start_string='<%',
+        block_end_string='%>',
+        variable_start_string='@@',
+        variable_end_string='@@'
+        ))
+
+app = CustomFlask(__name__, static_url_path='/', template_folder='src/webapp/dist')
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql+psycopg2://chatr:Admin123@localhost/chatr'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_ECHO'] = True
@@ -430,7 +444,7 @@ def profile_like(id):
 
         db.session.commit()
     except Exception as e:
-        println(e)
+        logger.debug('Error posting like. Ignoring %s', e)
 
     return jsonify(message='OK')
 
@@ -648,7 +662,12 @@ def sio_isconnect_handler():
     _sids.pop(int(session['user_id']), None)
 
 
-@app.route('/', defaults={'path': 'index.html'})
+#@app.route('/', defaults={'path': 'index.html'})
+@app.route('/', defaults={'lang': 'en'})
+@app.route('/<lang>')
+def index(lang):
+    return render_template('index.html', **dict(config.items('seo_%s' % (lang,))))
+
 @app.route('/<path:path>')
 def dist(path):
     return send_from_directory('src/webapp/dist', path)

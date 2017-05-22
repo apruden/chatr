@@ -35,7 +35,7 @@ angular
     });
   })
   .config(function ($stateProvider, $urlRouterProvider, $httpProvider, $translateProvider) {
-    $translateProvider.useStaticFilesLoader({prefix: 'i18n/', suffix: '.json'}).useSanitizeValueStrategy('escape').fallbackLanguage(['en']).registerAvailableLanguageKeys(['en', 'fr', 'de', 'es'], {
+    $translateProvider.useStaticFilesLoader({prefix: 'i18n/', suffix: '.json'}).useSanitizeValueStrategy('sanitize').fallbackLanguage(['en']).registerAvailableLanguageKeys(['en', 'fr', 'de', 'es'], {
       'en_*': 'en',
       'fr_*': 'fr',
       'es_*': 'es',
@@ -193,7 +193,6 @@ angular
           Profile.get({id: 'me'}).$promise.then(function() {
             $state.go('search');
           }).catch(function(e) {
-            console.log(e);
             if (e.status === 404) {
               $state.go('profileCreate');
             }

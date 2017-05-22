@@ -92,9 +92,15 @@
                                                          ngf-resize="{width: 800, height: 500, quality: 0.8, type: 'image/jpeg', centerCrop: true, pattern: '.jpg', restoreExif: false}">
         </div>
       </fieldset>
+      <div ng-if="!profile.id" class="checkbox"  ng-class="{'has-error': profileForm.termsAndConditions.$invalid}">
+        <label>
+          <input name="termsAndConditions" class="from-control" type="checkbox" required ng-model="profile.termsAndConditions" >
+          <span ng-bind-html="'termsAndConditions' | translate"></span>
+        </label>
+      </div>
       <div class="form-group">
         <button class="btn btn-primary" type="submit" translate>save</button>
-        <button class="btn btn-default" ng-click="cancelEdit()" translate>cancel</button>
+        <button ng-show="profile.id" class="btn btn-default" ng-click="cancelEdit()" translate>cancel</button>
       </div>
     </form>
   </div>

@@ -1,4 +1,6 @@
 {
+    "site": "chatr",
+    "termsAndConditions": "I have read and accept the <a href=\"/terms\" target=\"_blank\">terms of use</a>",
     "dob": "Date of Birth",
     "city": "City",
     "username": "Username",
