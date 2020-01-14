@@ -374,7 +374,12 @@ def upload():
 @app.route('/api/cities')
 @login_required
 def cities():
-    return dumps(City.query.search(request.args.get('q')).limit(10).all())
+    if request.args.get('q'):
+        return dumps(City.query.search(request.args.get('q')).limit(10).all())
+    else:
+        loc = request.args.get('location').split(';')[1]
+        pt = WKTElement(loc, srid=4326)
+        return dumps(City.query.filter(ST_Distance(City.location, pt) < int(request.args.get('dist', 2000))).limit(10).all())
 
 @app.route('/api/interests')
 @login_required

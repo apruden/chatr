@@ -27,7 +27,8 @@ angular
     'angular-inview',
     'ui.router',
     'gajus.swing',
-    'ui.select'
+    'ui.select',
+    'ngGeolocation'
   ])
   .run(function($rootScope) {
     $rootScope.$on('$stateChangeSuccess', function() {
@@ -478,7 +479,7 @@ angular
       $scope.canSend = false;
     };
   })
-  .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, Profile, Upload, Cities, Interests) {
+  .controller('ProfileEditCtrl', function ($scope, $state, $stateParams, $geolocation, Profile, Upload, Cities, Interests) {
     $scope.dataOptions = {
       "status": ["single", "married", "commonLaw", "divorced", "widow"],
       "children": ["older", "yes", "no"],
@@ -490,6 +491,25 @@ angular
     $scope.getInterests = function(q) {
       $scope.interests = Interests.query({q: q});
     };
+
+    $geolocation.getCurrentPosition({
+      timeout: 60 * 1000,
+      enableHighAccuracy: true
+    }).then(function(pos) {
+      console.log('>>>>>', pos);
+    }).catch(function(err) {
+      console.log('<<<<', err);
+    });
+
+    navigator.geolocation.getCurrentPosition(function(pos) {
+      console.log('===', pos);
+    }, function(err) {
+      console.log(';;;', err);
+    });
+
+    Cities.query({location: 'SRID=4326;POINT (24.116667 55.8)'}).$promise.then(function(res) {
+      console.log('---', res);
+    });
 
     var yearTo = moment().subtract(18, 'years').year();
     var yearFrom = moment().subtract(99, 'years').year();
