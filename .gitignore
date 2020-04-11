@@ -94,3 +94,5 @@ chatr.conf
 assets/
 data.txt
 chatr.ini
+
+.DS_Store
