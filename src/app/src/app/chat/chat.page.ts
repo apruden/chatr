@@ -7,9 +7,17 @@ import { Component, OnInit } from '@angular/core';
 })
 export class ChatPage implements OnInit {
 
-  constructor() { }
+  messages: any[] = []
 
-  ngOnInit() {
+  constructor() { 
+    this.messages = [
+      {text: "hello"},
+      {text: "foo"},
+      {text: "bar"},
+    ]
   }
 
+  ngOnInit() {
+    
+  }
 }

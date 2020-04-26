@@ -1,14 +1,33 @@
 <ion-header translucent>
   <ion-toolbar>
-    <ion-title>Accounts</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/search"></ion-back-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-avatar slot="start">
+      <img src="https://gravatar.com/avatar/dba6bae8c566f9d4041fb9cd9ada7741?d=identicon&f=y">
+    </ion-avatar>
+    <ion-title>foo_user</ion-title>
   </ion-toolbar>
 </ion-header>
-
 <ion-content fullscreen>
-  <ion-list id="list"></ion-list>
-
+  <ion-list id="list">
+    <ion-item *ngFor="let message of messages">
+      <ion-label>{{message.text}}</ion-label>
+    </ion-item>
+  </ion-list>
   <ion-infinite-scroll threshold="100px" id="infinite-scroll">
     <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Loading more data...">
     </ion-infinite-scroll-content>
   </ion-infinite-scroll>
 </ion-content>
+<ion-footer class="ion-no-border">
+  <ion-toolbar>
+    <ion-title>Footer - No Border</ion-title>
+    <ion-textarea>enter this</ion-textarea>
+  </ion-toolbar>
+</ion-footer>

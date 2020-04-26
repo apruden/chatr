@@ -1,18 +1,33 @@
-<ion-tabs>
+<ion-menu side="end" menuId="first" contentId="main">
+  <ion-header>
+    <ion-toolbar color="primary">
+      <ion-title>Start Menu</ion-title>
+    </ion-toolbar>
+  </ion-header>
+  <ion-content>
+    <ion-list>
+      <ion-item [routerLink]="'/tabs/profile-edit'">Profile</ion-item>
+      <ion-item>Sign Out</ion-item>
+    </ion-list>
+  </ion-content>
+</ion-menu>
 
+<ion-tabs id="main">
+  
   <ion-tab-bar slot="bottom">
     <ion-tab-button tab="search">
-      <ion-icon name="flash"></ion-icon>
+      <ion-icon name="search"></ion-icon>
       <ion-label>Search</ion-label>
     </ion-tab-button>
 
-    <ion-tab-button tab="profile">
-      <ion-icon name="apps"></ion-icon>
-      <ion-label>Profile</ion-label>
+    <ion-tab-button tab="chats">
+      <ion-badge color="danger">66</ion-badge>
+      <ion-icon name="chatbubbles"></ion-icon>
+      <ion-label>Chat</ion-label>
     </ion-tab-button>
 
     <ion-tab-button tab="feed">
-      <ion-icon name="send"></ion-icon>
+      <ion-icon name="list"></ion-icon>
       <ion-label>Feed</ion-label>
     </ion-tab-button>
   </ion-tab-bar>

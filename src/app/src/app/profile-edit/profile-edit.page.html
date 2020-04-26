@@ -1,5 +1,11 @@
 <ion-header translucent>
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/search"></ion-back-button>
+    </ion-buttons>
+    <ion-buttons slot="end">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
     <ion-title>Create Account</ion-title>
   </ion-toolbar>
 </ion-header>
@@ -8,25 +14,71 @@
   <form onsubmit="processForm(event)">
     <ion-list lines="full" class="ion-no-margin ion-no-padding">
       <ion-item>
-        <ion-label position="stacked">Nickname<ion-text color="danger">*</ion-text></ion-label>
+        <ion-label position="stacked">Nickname</ion-label>
         <ion-input required type="text" oninput="handleFirstNameValue(event)"></ion-input>
       </ion-item>
 
-      <ion-item>
-        <ion-label position="floating">Header</ion-label>
-        <ion-input></ion-input>
-      </ion-item>
+      <ion-item-group>
+        <ion-item-divider>
+          <ion-label>pictures</ion-label>
+        </ion-item-divider>
+        <ion-item>
+          <img [src]="imageURL ? imageURL : 'https://via.placeholder.com/400'" class="rounded mx-auto d-block img-thumbnail"
+            alt="HA">
+        </ion-item>
+        <ion-item>
+          <input type="file" *ngIf="!imageURL" (change)="fileChanged($event)" accept="image/*" class="filebtn" #fileButton/>
+        </ion-item>
+      </ion-item-group>
 
-      <ion-item>
-        <ion-label position="stacked">About Me</ion-label>
-        <ion-textarea></ion-textarea>
-      </ion-item>
+      <ion-item-group>
+        <ion-item-divider>
+          <ion-label>general</ion-label>
+        </ion-item-divider>
+        <ion-item>
+          <ion-label position="stacked">Headline</ion-label>
+          <ion-input></ion-input>
+        </ion-item>
+        <ion-item>
+          <ion-label position="stacked">About Me</ion-label>
+          <ion-textarea></ion-textarea>
+        </ion-item>
+      </ion-item-group>
+
+      <ion-item-divider>
+        <ion-label>interests</ion-label>
+      </ion-item-divider>
+
+      <p>
+        <ion-chip outline color="primary">
+          <ion-icon name="pin"></ion-icon>
+          <ion-label>Madison</ion-label>
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+        <ion-chip outline color="secondary">
+          <ion-icon name="wine"></ion-icon>
+          <ion-label>Nightlife</ion-label>
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+        <ion-chip outline color="tertiary">
+          <ion-icon name="restaurant"></ion-icon>
+          <ion-label>Dining</ion-label>
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+        <ion-chip outline color="dark">
+          <ion-icon name="videocam"></ion-icon>
+          <ion-label>Entertainment</ion-label>
+          <ion-icon name="close-circle"></ion-icon>
+        </ion-chip>
+      </p>
+      <ion-searchbar></ion-searchbar>
+
     </ion-list>
 
+
     <div class="ion-padding">
-      <ion-button expand="block" type="submit" class="ion-no-margin">Create account</ion-button>
+      <ion-button expand="block" type="submit" class="ion-no-margin">Save/Create</ion-button>
     </div>
   </form>
-</ion-content>
 
-<ion-alert-controller></ion-alert-controller>
+</ion-content>

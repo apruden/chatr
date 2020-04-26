@@ -28,6 +28,36 @@ const routes: Routes = [
         ]
       },
       {
+        path: 'chat',
+        children: [
+          {
+            path: '',
+            loadChildren: () =>
+              import('../chat/chat.module').then(m => m.ChatPageModule)
+          }
+        ]
+      },
+      {
+        path: 'chats',
+        children: [
+          {
+            path: '',
+            loadChildren: () =>
+              import('../chats/chats.module').then(m => m.ChatsPageModule)
+          }
+        ]
+      },
+      {
+        path: 'profile-edit',
+        children: [
+          {
+            path: '',
+            loadChildren: () =>
+              import('../profile-edit/profile-edit.module').then(m => m.ProfileEditPageModule)
+          }
+        ]
+      },
+      {
         path: 'profile',
         children: [
           {

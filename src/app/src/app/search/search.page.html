@@ -1,6 +1,32 @@
 <ion-header>
   <ion-toolbar>
+    <ion-buttons slot="end">
+      <ion-menu-button></ion-menu-button>
+    </ion-buttons>
     <ion-title>search</ion-title>
+  </ion-toolbar>
+  <ion-toolbar>
+    <ion-buttons slot="primary">
+      <ion-button (click)="toogleOptions()">
+        <ion-icon slot="icon-only" ios="ellipsis-vertical" md="ellipsis-vertical" *ngIf="!showOptions"></ion-icon>
+        <ion-icon slot="icon-only" ios="ellipsis-horizontal" md="ellipsis-horizontal" *ngIf="showOptions"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>all 20-50, 50km away</ion-title>
+  </ion-toolbar>
+  <ion-toolbar *ngIf="showOptions">
+    <ion-range id="dual-range" dual-knobs pin color="dark">
+      <ion-icon slot="start" size="small" name="brush"></ion-icon>
+      <ion-icon slot="end" name="brush"></ion-icon>
+    </ion-range>
+    <ion-range value="20">
+      <ion-icon slot="start" size="small" name="sunny"></ion-icon>
+      <ion-icon slot="end" name="sunny"></ion-icon>
+    </ion-range>
+    <ion-segment value="all">
+      <ion-segment-button value="all">All</ion-segment-button>
+      <ion-segment-button value="favorites">Favorites</ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 
@@ -8,89 +34,16 @@
   <ion-refresher slot="fixed" id="refresher">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
-
   <ion-list>
-  <ion-card>
-    <img src="https://via.placeholder.com/400" />
-    <ion-card-header>
-      <ion-card-subtitle>Destination</ion-card-subtitle>
-      <ion-card-title>Madison, WI</ion-card-title>
-    </ion-card-header>
-    
-    <ion-item>
-      <ion-icon name="pin" slot="start"></ion-icon>
-      <ion-label>ion-item in a card, icon left, button right</ion-label>
-      <ion-button fill="outline" slot="end">View</ion-button>
-    </ion-item>
-  
-    <ion-card-content>
-      This is content, without any paragraph or header tags,
-      within an ion-card-content element.
-    </ion-card-content>
-  </ion-card>
-
-    <ion-card>
-    <img src="https://via.placeholder.com/400" />
-    <ion-card-header>
-      <ion-card-subtitle>Destination</ion-card-subtitle>
-      <ion-card-title>Madison, WI</ion-card-title>
-    </ion-card-header>
-    
-    <ion-item>
-      <ion-icon name="pin" slot="start"></ion-icon>
-      <ion-label>ion-item in a card, icon left, button right</ion-label>
-      <ion-button fill="outline" slot="end">View</ion-button>
-    </ion-item>
-  
-    <ion-card-content>
-      This is content, without any paragraph or header tags,
-      within an ion-card-content element.
-    </ion-card-content>
-  </ion-card>
-
-  <ion-card>
-    <img src="https://via.placeholder.com/400" />
-    <ion-card-header>
-      <ion-card-subtitle>Destination</ion-card-subtitle>
-      <ion-card-title>Madison, WI</ion-card-title>
-    </ion-card-header>
-    
-    <ion-item>
-      <ion-icon name="pin" slot="start"></ion-icon>
-      <ion-label>ion-item in a card, icon left, button right</ion-label>
-      <ion-button fill="outline" slot="end">View</ion-button>
-    </ion-item>
-  
-    <ion-card-content>
-      This is content, without any paragraph or header tags,
-      within an ion-card-content element.
-    </ion-card-content>
-  </ion-card>
-  <ion-card>
-    <img src="https://via.placeholder.com/400" />
-    <ion-card-header>
-      <ion-card-subtitle>Destination</ion-card-subtitle>
-      <ion-card-title>Madison, WI</ion-card-title>
-    </ion-card-header>
-    
-    <ion-item>
-      <ion-icon name="pin" slot="start"></ion-icon>
-      <ion-label>ion-item in a card, icon left, button right</ion-label>
-      <ion-button fill="outline" slot="end">View</ion-button>
-    </ion-item>
-  
-    <ion-card-content>
-      This is content, without any paragraph or header tags,
-      within an ion-card-content element.
-    </ion-card-content>
-  </ion-card>
-
+    <ion-card *ngFor="let profile of profiles" [routerLink]="'/tabs/profile'">
+      <img src="https://via.placeholder.com/400" />
+      <ion-card-header>
+        <ion-card-title>{{profile.name}}, {{profile.age}}</ion-card-title>
+        <ion-card-subtitle>{{profile.location}}</ion-card-subtitle>
+      </ion-card-header>
+      <ion-card-content>
+        {{profile.intro}}
+      </ion-card-content>
+    </ion-card>
   </ion-list>
-
-  <ion-fab vertical="top" horizontal="end" slot="fixed">
-    <ion-fab-button>
-      <ion-icon name="add"></ion-icon>
-    </ion-fab-button>
-  </ion-fab>
 </ion-content>
-
