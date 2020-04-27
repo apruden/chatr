@@ -8,7 +8,19 @@
 </ion-header>
 
 <ion-content fullscreen>
-  <ion-list id="list"></ion-list>
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+  <ion-list id="list">
+    <ion-item *ngFor="let notification of notifications">
+      <ion-avatar *ngIf="notification.type == 'likedYou'">
+        <ion-icon name="heart" size="large"></ion-icon>
+      </ion-avatar>
+      <ion-label>
+        {{notification.subject}} sent message
+      </ion-label>
+    </ion-item>
+  </ion-list>
   <ion-infinite-scroll threshold="100px" id="infinite-scroll">
     <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Loading more data...">
     </ion-infinite-scroll-content>

@@ -34,8 +34,9 @@
   <ion-refresher slot="fixed" id="refresher">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
-  <ion-list>
-    <ion-card *ngFor="let profile of profiles" [routerLink]="'/tabs/profile'">
+  <ion-grid fixed>
+    <ion-row>
+    <ion-card ion-col *ngFor="let profile of profiles" [routerLink]="'/tabs/profile'">
       <img src="https://via.placeholder.com/400" />
       <ion-card-header>
         <ion-card-title>{{profile.name}}, {{profile.age}}</ion-card-title>
@@ -44,6 +45,10 @@
       <ion-card-content>
         {{profile.intro}}
       </ion-card-content>
+      <ion-item>
+        <ion-button fill="outline" slot="end">View</ion-button>
+      </ion-item>
     </ion-card>
-  </ion-list>
+    </ion-row>
+  </ion-grid>
 </ion-content>

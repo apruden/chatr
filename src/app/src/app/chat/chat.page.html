@@ -16,8 +16,14 @@
 </ion-header>
 <ion-content fullscreen>
   <ion-list id="list">
-    <ion-item *ngFor="let message of messages">
-      <ion-label>{{message.text}}</ion-label>
+    <ion-item *ngFor="let message of messages; index as i" [color]="i % 2 == 0 ? 'primary': 'light'" 
+    [ngClass]="{'sent': i % 2 == 0, 'received': i % 2 == 1}" text-wrap>
+      <ion-label style="white-space: normal;">
+        <h3>foo test</h3>
+        <p>
+        {{message.text}}
+        </p>
+      </ion-label>
     </ion-item>
   </ion-list>
   <ion-infinite-scroll threshold="100px" id="infinite-scroll">
@@ -25,9 +31,13 @@
     </ion-infinite-scroll-content>
   </ion-infinite-scroll>
 </ion-content>
-<ion-footer class="ion-no-border">
+<ion-footer>
   <ion-toolbar>
-    <ion-title>Footer - No Border</ion-title>
-    <ion-textarea>enter this</ion-textarea>
+    <ion-textarea placeholder="Say something..."></ion-textarea>
+    <ion-buttons slot="end">
+      <ion-button>
+        <ion-icon slot="icon-only" name="send"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-footer>

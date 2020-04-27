@@ -13,7 +13,17 @@ export class SearchPage implements OnInit {
 
   ngOnInit() {
     this.profiles = [
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'} 
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
+     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
     ]
   }
 
