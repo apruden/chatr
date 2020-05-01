@@ -1,0 +1,30 @@
+{
+  "name": "chatrd",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "scripts": {
+    "start": "tsc && node dist/index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/graphql": "^14.5.0",
+    "@types/pg": "^7.14.3",
+    "apollo-server-express": "^2.12.0",
+    "class-transformer": "^0.2.3",
+    "express": "^4.17.1",
+    "graphql": "^14.1.1",
+    "graphql-subscriptions": "^1.1.0",
+    "pg": "^8.0.3",
+    "pg-listen": "^1.5.1",
+    "reflect-metadata": "^0.1.13",
+    "subscriptions-transport-ws": "^0.9.16",
+    "type-graphql": "^0.17.6"
+  },
+  "devDependencies": {
+    "tslint": "^6.1.2",
+    "typescript": "^3.8.3"
+  }
+}
