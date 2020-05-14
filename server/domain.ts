@@ -28,7 +28,7 @@ export class Notification {
   @Field() to: string
   @Field() sent: Date
   @Field() type: string
-  @Field(type => GraphQLJSONObject) payload: any
+  @Field((type) => GraphQLJSONObject) payload: any
 }
 
 @InputType()
@@ -36,9 +36,8 @@ export class ActionInput {
   @Field() type: string
   @Field() subject: string
   @Field() target: string
-  @Field(type => GraphQLJSONObject) payload: string
+  @Field((type) => GraphQLJSONObject) payload: string
 }
-
 
 @ObjectType()
 export class Criterion {
@@ -90,9 +89,9 @@ export class MediaInput {
 export class Profile {
   @Field() headline: string
   @Field() description: string
-  @Field(type => [String]) interests: string[]
-  @Field(type => [Media]) pictures: Media[]
-  @Field() dob: Date
+  @Field((type) => [String]) interests: string[]
+  @Field((type) => [Media]) pictures: Media[]
+  @Field() dob: number
   @Field() gender: string
   @Field() location: string
   @Field() latestActive: Date
@@ -102,9 +101,9 @@ export class Profile {
 export class ProfileInput {
   @Field() headline: string
   @Field() description: string
-  @Field(type => [String]) interests: string[]
-  @Field(type => [MediaInput]) pictures: MediaInput[]
-  @Field() dob: Date
+  @Field((type) => [String]) interests: string[]
+  @Field((type) => [MediaInput]) pictures: MediaInput[]
+  @Field() dob: number
   @Field() gender: string
   @Field() location: string
 }
@@ -113,7 +112,7 @@ export class ProfileInput {
 export class Match {
   @Field() id: string
   @Field() picture: string
-  @Field() dob: Date
+  @Field() dob: number
   @Field() location: string
   @Field() headline: string
   @Field() latestActive: Date
