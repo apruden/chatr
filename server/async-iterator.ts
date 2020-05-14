@@ -1,14 +1,17 @@
-import { $$asyncIterator } from 'iterall';
-import { PubSubEngine } from 'graphql-subscriptions';
-
+import { $$asyncIterator } from "iterall";
+import { PubSubEngine } from "graphql-subscriptions";
 
 export class PubSubAsyncIterator<T> implements AsyncIterator<T> {
-  constructor(pubSubEngine: PubSubEngine, subNames: string | string[], options: any) {
+  constructor(
+    pubSubEngine: PubSubEngine,
+    subNames: string | string[],
+    options: any
+  ) {
     this.pubsub = pubSubEngine;
     this.pullQueue = [];
     this.pushQueue = [];
     this.listening = true;
-    this.eventsArray = typeof subNames === 'string' ? [subNames] : subNames;
+    this.eventsArray = typeof subNames === "string" ? [subNames] : subNames;
     this.options = options;
     this.allSubscribed = this.subscribeAll();
   }
@@ -50,7 +53,7 @@ export class PubSubAsyncIterator<T> implements AsyncIterator<T> {
   }
 
   private pullValue(): Promise<IteratorResult<any>> {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       if (this.pushQueue.length !== 0) {
         resolve({ value: this.pushQueue.shift(), done: false });
       } else {
@@ -63,7 +66,9 @@ export class PubSubAsyncIterator<T> implements AsyncIterator<T> {
     if (this.listening) {
       this.listening = false;
       this.unsubscribeAll(subscriptionIds);
-      this.pullQueue.forEach(resolve => resolve({ value: undefined, done: true }));
+      this.pullQueue.forEach((resolve) =>
+        resolve({ value: undefined, done: true })
+      );
       this.pullQueue.length = 0;
       this.pushQueue.length = 0;
     }
@@ -71,7 +76,13 @@ export class PubSubAsyncIterator<T> implements AsyncIterator<T> {
 
   private subscribeAll() {
     return Promise.all(
-      this.eventsArray.map(eventName => this.pubsub.subscribe(eventName, this.pushValue.bind(this), this.options))
+      this.eventsArray.map((eventName) =>
+        this.pubsub.subscribe(
+          eventName,
+          this.pushValue.bind(this),
+          this.options
+        )
+      )
     );
   }
 
