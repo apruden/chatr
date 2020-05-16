@@ -1,4 +1,5 @@
 import { Component, OnInit } from '@angular/core';
+import { Apollo } from 'apollo-angular';
 import gql from 'graphql-tag';
 
 @Component({
@@ -10,7 +11,7 @@ export class SearchPage implements OnInit {
   showOptions: boolean = false
   profiles: any[] = []
 
-  constructor() { }
+  constructor(private apollo: Apollo) { }
 
   ngOnInit() {
     this.profiles = [
@@ -31,4 +32,17 @@ export class SearchPage implements OnInit {
   toogleOptions() {
     this.showOptions = !this.showOptions
   }
+
+  getMatches() {
+    this.apollo.watchQuery({
+      query: gql`{
+        getMatches(criterion: $criterion) {
+          id
+        }
+      }`
+    }).valueChanges.subscribe(result => {
+
+    })
+  }
+
 }
