@@ -52,8 +52,8 @@ passport.use(
 )
 
 const app = express()
-app.use(express.json()) // for parsing application/json
-app.use(express.urlencoded({ extended: true })) // for parsing application/x-www-form-urlencoded
+app.use(express.json())
+app.use(express.urlencoded({ extended: true }))
 
 app.post('/login', function (req, res, next) {
   passport.authenticate('local', { session: false }, (err, user, info) => {
@@ -76,7 +76,7 @@ app.post('/login', function (req, res, next) {
   })(req, res)
 })
 
-app.use('/graphql', passport.authenticate('jwt', { session: false }))
+//app.use('/graphql', passport.authenticate('jwt', { session: false }))
 
 buildSchema({
   resolvers: [
@@ -96,7 +96,7 @@ buildSchema({
     schema,
     playground: true,
     context: ({ req }) => {
-      return { req, user: req.user }
+      return { req, user: {id: 'foo'} }
     },
   })
 

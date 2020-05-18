@@ -1,5 +1,4 @@
 import { Field, ObjectType, InputType } from 'type-graphql'
-import { GraphQLJSONObject } from 'graphql-type-json'
 
 @ObjectType()
 export class Message {
@@ -28,7 +27,6 @@ export class Notification {
   @Field() to: string
   @Field() sent: Date
   @Field() type: string
-  @Field((type) => GraphQLJSONObject) payload: any
 }
 
 @InputType()
@@ -36,7 +34,6 @@ export class ActionInput {
   @Field() type: string
   @Field() subject: string
   @Field() target: string
-  @Field((type) => GraphQLJSONObject) payload: string
 }
 
 @ObjectType()

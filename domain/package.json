@@ -1,0 +1,17 @@
+{
+  "name": "chatr-domain",
+  "version": "1.0.0",
+  "description": "",
+  "main": "dist/domain.js",
+  "types": "dist/domain.d.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "class-validator": "^0.12.2",
+    "graphql": "^14.1.1",
+    "type-graphql": "^0.17.6"
+  }
+}

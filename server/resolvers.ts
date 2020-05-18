@@ -17,16 +17,16 @@ import {
   Notification,
   ActionInput,
   Profile,
-  Match,
   ProfileInput,
   Account,
   Criterion,
+  Match,
   Relation,
   AccountInput,
   CriterionInput,
   Registration,
   RegistrationInput,
-} from './domain'
+} from 'chatr-domain'
 import { plainToClass } from 'class-transformer'
 import { pool } from './db'
 import { ClassType } from 'class-transformer/ClassTransformer'
@@ -138,7 +138,6 @@ export class MatchResolver {
         OFFSET $6 LIMIT $7
       `,
       [
-        to,
         year - criterion.ageMin,
         year - criterion.ageMax,
         criterion.gender,
