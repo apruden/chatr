@@ -1,7 +1,7 @@
-import { Component, OnInit } from '@angular/core';
-import { Apollo } from 'apollo-angular';
-import gql from 'graphql-tag';
-import {Match, CriterionInput} from 'chatr-domain';
+import { Component, OnInit } from '@angular/core'
+import { Apollo } from 'apollo-angular'
+import gql from 'graphql-tag'
+import { Match, CriterionInput } from 'chatr-domain'
 
 type Response = {
   search: Match[]
@@ -14,25 +14,12 @@ type Response = {
 })
 export class SearchPage implements OnInit {
   showOptions: boolean = false
-  profiles: any[] = []
+  profiles: Match[] = []
 
-  constructor(private apollo: Apollo) { }
+  constructor(private apollo: Apollo) {}
 
   ngOnInit() {
-    this.profiles = [
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-     {name: 'foo', age: 100, location: 'Montreal', intro: 'lorem ipsum'},
-    ]
-
+    this.profiles = []
     this.getMatches()
   }
 
@@ -48,22 +35,26 @@ export class SearchPage implements OnInit {
     criterion.gender = 'male'
     criterion.location = '0101000000000000000000F03F000000000000F03F'
 
-    this.apollo.watchQuery<Response>({
-      query: gql`query Search($offset: Int, $limit: Int, $criterion: CriterionInput!) {
-        search(offset: $offset, limit: $limit, criterion: $criterion) {
-          id
-          headline
-        }
-      }`,
-      variables: {
-        offset: 0,
-        limit: 20,
-        criterion
-      }
-    }).valueChanges.subscribe(result => {
-      console.log("<<<<<", result)
-      result.data.search.forEach(m => console.log('>>>>>', m.headline))
-    })
+    this.apollo
+      .watchQuery<Response>({
+        query: gql`
+          query Search($offset: Int, $limit: Int, $criterion: CriterionInput!) {
+            search(offset: $offset, limit: $limit, criterion: $criterion) {
+              id
+              dob
+              location
+              headline
+            }
+          }
+        `,
+        variables: {
+          offset: 0,
+          limit: 20,
+          criterion,
+        },
+      })
+      .valueChanges.subscribe((result) => {
+        this.profiles = result.data.search
+      })
   }
-
 }

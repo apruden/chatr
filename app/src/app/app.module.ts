@@ -13,9 +13,12 @@ import { ApolloModule, APOLLO_OPTIONS } from 'apollo-angular'
 import { HttpLinkModule, HttpLink } from 'apollo-angular-link-http'
 import { InMemoryCache } from 'apollo-cache-inmemory'
 import { HttpClientModule } from '@angular/common/http'
+import { SharedModule } from './shared/shared.module'
 
 @NgModule({
-  declarations: [AppComponent],
+  declarations: [
+    AppComponent,
+  ],
   entryComponents: [],
   imports: [
     BrowserModule,
@@ -24,6 +27,7 @@ import { HttpClientModule } from '@angular/common/http'
     ApolloModule,
     IonicModule.forRoot(),
     AppRoutingModule,
+    SharedModule,
   ],
   providers: [
     StatusBar,
