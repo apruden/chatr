@@ -12,6 +12,7 @@ const GET_MATCHES = gql`
     search(offset: $offset, limit: $limit, criterion: $criterion) {
       id
       dob
+      picture
       location
       headline
     }

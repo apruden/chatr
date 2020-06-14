@@ -26,7 +26,8 @@ export class AccountService {
 
   constructor(private apollo: Apollo) { }
 
-  getAccount(): Account {
+  getAccount(): Promise<Account> {
     this.apollo.query<Response>({ query: GET_ACCOUNT }).subscribe(r => r.data.account)
+    return Promise.resolve(new Account())
   }
 }
