@@ -1,3 +1,4 @@
+import { log } from './logger'
 import 'reflect-metadata'
 import express from 'express'
 import path from 'path'
@@ -105,6 +106,6 @@ buildSchema({
   server.installSubscriptionHandlers(httpServer)
 
   httpServer.listen({ port: 4000 }, () => {
-    console.log(`Server ready at http://localhost:4000${server.graphqlPath}`)
+    log.info(`Server ready at http://localhost:4000${server.graphqlPath}`)
   })
 })

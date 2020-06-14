@@ -1,3 +1,4 @@
+import { log } from './logger'
 import {
   Resolver,
   Query,
@@ -125,7 +126,7 @@ export class MatchResolver {
     @Ctx() context: any,
     @Args() { offset, limit, criterion }: SearchArgs
   ): Promise<Match[]> {
-    console.log('>>>>>', context.user, criterion, offset, limit)
+    log.info('MatchResolver.search', context.user, criterion, offset, limit)
     const year = new Date().getFullYear()
     const { id: to } = context.user
     const res = await pool.query(

@@ -33,4 +33,17 @@ export class FeedPage implements OnInit {
       ev.target.complete()
     }, 2000)
   }
+
+  loadData(event) {
+    setTimeout(() => {
+      console.log('Done');
+      event.target.complete();
+
+      // App logic to determine if all data is loaded
+      // and disable the infinite scroll
+      if (true) {
+        event.target.disabled = true;
+      }
+    }, 500)
+  }
 }

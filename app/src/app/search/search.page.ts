@@ -7,6 +7,17 @@ type Response = {
   search: Match[]
 }
 
+const GET_MATCHES = gql`
+  query Search($offset: Int, $limit: Int, $criterion: CriterionInput!) {
+    search(offset: $offset, limit: $limit, criterion: $criterion) {
+      id
+      dob
+      location
+      headline
+    }
+  }
+`
+
 @Component({
   selector: 'app-search',
   templateUrl: './search.page.html',
@@ -20,14 +31,14 @@ export class SearchPage implements OnInit {
 
   ngOnInit() {
     this.profiles = []
-    this.getMatches()
+    this.findMatches()
   }
 
   toogleOptions() {
     this.showOptions = !this.showOptions
   }
 
-  getMatches() {
+  findMatches() {
     const criterion = new CriterionInput()
     criterion.ageMin = 18
     criterion.ageMax = 30
@@ -37,24 +48,24 @@ export class SearchPage implements OnInit {
 
     this.apollo
       .watchQuery<Response>({
-        query: gql`
-          query Search($offset: Int, $limit: Int, $criterion: CriterionInput!) {
-            search(offset: $offset, limit: $limit, criterion: $criterion) {
-              id
-              dob
-              location
-              headline
-            }
-          }
-        `,
-        variables: {
-          offset: 0,
-          limit: 20,
-          criterion,
-        },
+        query: GET_MATCHES,
+        variables: { offset: 0, limit: 20, criterion },
       })
       .valueChanges.subscribe((result) => {
         this.profiles = result.data.search
       })
+  }
+
+  loadData(event) {
+    setTimeout(() => {
+      console.log('Done')
+      event.target.complete()
+
+      // App logic to determine if all data is loaded
+      // and disable the infinite scroll
+      if (true) {
+        event.target.disabled = true
+      }
+    }, 500)
   }
 }

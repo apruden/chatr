@@ -31,7 +31,7 @@
 </ion-header>
 
 <ion-content>
-  <ion-refresher slot="fixed" id="refresher">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
   <ion-grid fixed>
@@ -51,4 +51,8 @@
     </ion-card>
     </ion-row>
   </ion-grid>
+  <ion-infinite-scroll threshold="100px" id="infinite-scroll" (ionInfinite)="loadData($event)">
+    <ion-infinite-scroll-content loading-spinner="bubbles" loading-text="Loading more data...">
+    </ion-infinite-scroll-content>
+  </ion-infinite-scroll>
 </ion-content>
