@@ -12,13 +12,12 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
   <ion-list id="list">
-    <ion-item *ngFor="let notification of notifications">
-      <ion-avatar *ngIf="notification.type == 'likedYou'">
-        <ion-icon name="heart" size="large"></ion-icon>
-      </ion-avatar>
-      <ion-label>
-        {{notification.subject}} sent message
-      </ion-label>
+    <ion-item *ngFor="let feed of feeds">
+      <div [ngSwitch]="feed?.name">
+        <feed-liked-you *ngSwitchCase="'likedYou'" [feed]="feed"></feed-liked-you>
+        <feed-viewed-you *ngSwitchCase="'viewedYou'" [feed]="feed"></feed-viewed-you>
+        <feed-new-message *ngSwitchCase="'newMessage'" [feed]="feed"></feed-new-message>
+      </div>
     </ion-item>
   </ion-list>
   <ion-infinite-scroll threshold="100px" id="infinite-scroll" (ionInfinite)="loadData($event)">

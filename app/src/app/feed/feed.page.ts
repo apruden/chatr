@@ -1,11 +1,22 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit } from '@angular/core'
+import { Notification } from 'chatr-domain'
 
 
-interface Notification {
-  type: string
-  subject: string
-  dateTime: string
-  thumbnail: string
+export interface FeedEntry {
+  name: string
+  sent: Date
+}
+
+export interface LikedYouEntry extends FeedEntry {
+  from: string
+}
+
+export interface ViewedYouEntry extends FeedEntry {
+  from: string
+}
+
+export interface NewMessageEntry extends FeedEntry {
+  from: string
 }
 
 
@@ -15,16 +26,15 @@ interface Notification {
   styleUrls: ['./feed.page.scss'],
 })
 export class FeedPage implements OnInit {
+  feeds: FeedEntry[]
 
-  notifications: Notification[]
-
-  constructor() { }
+  constructor() {}
 
   ngOnInit() {
-    this.notifications = [
-      { type: 'likedYou', subject: 'foo user', dateTime: '', thumbnail: ''},
-      { type: 'seeYou', subject: '', dateTime: '', thumbnail: '' },
-      { type: 'offer', subject: '', dateTime: '', thumbnail: '' },
+    this.feeds = [
+      {name: "likedYou",  sent: new Date(), from: "foo"} as LikedYouEntry,
+      {name: "viewedYou",  sent: new Date(), from: "bar"} as ViewedYouEntry,
+      {name: "newMessage",  sent: new Date(), from: "buzz"} as NewMessageEntry,
     ]
   }
 
@@ -36,13 +46,13 @@ export class FeedPage implements OnInit {
 
   loadData(event) {
     setTimeout(() => {
-      console.log('Done');
-      event.target.complete();
+      console.log('Done')
+      event.target.complete()
 
       // App logic to determine if all data is loaded
       // and disable the infinite scroll
       if (true) {
-        event.target.disabled = true;
+        event.target.disabled = true
       }
     }, 500)
   }

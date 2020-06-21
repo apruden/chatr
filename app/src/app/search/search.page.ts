@@ -1,7 +1,9 @@
 import { Component, OnInit } from '@angular/core'
 import { Apollo } from 'apollo-angular'
 import gql from 'graphql-tag'
-import { Match, CriterionInput } from 'chatr-domain'
+import { Match } from 'chatr-domain'
+import { AccountService } from '../services/account.service'
+import { classToPlain } from 'class-transformer'
 
 type Response = {
   search: Match[]
@@ -19,6 +21,8 @@ const GET_MATCHES = gql`
   }
 `
 
+const LIMIT = 20
+
 @Component({
   selector: 'app-search',
   templateUrl: './search.page.html',
@@ -28,7 +32,7 @@ export class SearchPage implements OnInit {
   showOptions: boolean = false
   profiles: Match[] = []
 
-  constructor(private apollo: Apollo) {}
+  constructor(private apollo: Apollo, private accountService: AccountService) {}
 
   ngOnInit() {
     this.profiles = []
@@ -39,34 +43,37 @@ export class SearchPage implements OnInit {
     this.showOptions = !this.showOptions
   }
 
-  findMatches() {
-    const criterion = new CriterionInput()
-    criterion.ageMin = 18
-    criterion.ageMax = 30
-    criterion.distance = 10
-    criterion.gender = 'male'
-    criterion.location = '0101000000000000000000F03F000000000000F03F'
+  async findMatches() {
+    const account = await this.accountService.getAccount()
+    const { criterion } = account
+    const criterionInput = classToPlain(criterion, {excludePrefixes: ['__']})
 
-    this.apollo
+    const found = await this.apollo
       .watchQuery<Response>({
         query: GET_MATCHES,
-        variables: { offset: 0, limit: 20, criterion },
+        variables: {
+          offset: this.profiles.length,
+          limit: LIMIT,
+          criterion: criterionInput,
+        },
       })
-      .valueChanges.subscribe((result) => {
-        this.profiles = result.data.search
-      })
+      .valueChanges.toPromise()
+      .then((result) => result.data.search)
+
+    this.profiles = this.profiles.concat(found)
+
+    return found.length > 0
+  }
+
+  doRefresh(event) {
+    this.profiles = []
+    this.findMatches()
   }
 
   loadData(event) {
-    setTimeout(() => {
-      console.log('Done')
+    this.findMatches().then((found) => {
       event.target.complete()
-
-      // App logic to determine if all data is loaded
-      // and disable the infinite scroll
-      if (true) {
-        event.target.disabled = true
-      }
-    }, 500)
+      event.target.disabled = !found
+    })
   }
 }

@@ -105,6 +105,7 @@ export class AccountResolver {
   @Query((returns) => Account)
   async getAccount(@Ctx() context: any): Promise<Account> {
     const { id: me } = context.user
+    log.info(`Getting account ${me}`)
     const res = await pool.query('SELECT data FROM accounts WHERE id = $1', [
       me,
     ])
@@ -126,9 +127,19 @@ export class MatchResolver {
     @Ctx() context: any,
     @Args() { offset, limit, criterion }: SearchArgs
   ): Promise<Match[]> {
-    log.info('MatchResolver.search', context.user, criterion, offset, limit)
+    log.info('MatchResolver.search %s %s', context.user, criterion, offset, limit)
     const year = new Date().getFullYear()
     const { id: to } = context.user
+    const args = [
+        year - criterion.ageMin,
+        year - criterion.ageMax,
+        criterion.gender,
+        criterion.location,
+        criterion.distance,
+        limit,
+        offset,
+      ]
+
     const res = await pool.query(
       `
       SELECT data FROM profiles as p
@@ -137,20 +148,10 @@ export class MatchResolver {
         AND (p.data ->> 'gender') = $3
         AND ST_Distance((p.data ->> 'location')::geometry, $4::geometry) < $5
         ORDER BY (p.data ->> 'latestActive')
-        OFFSET $6 LIMIT $7
-      `,
-      [
-        year - criterion.ageMin,
-        year - criterion.ageMax,
-        criterion.gender,
-        criterion.location,
-        criterion.distance,
-        offset,
-        limit,
-      ]
-    )
+        LIMIT $6 OFFSET $7
+      `, args)
 
-    return res.rows.map((row) => plainToClass(Match, row.data))
+    return res.rows.map((row) => plainToClass(Profile, row.data).toMatch())
   }
 }
 

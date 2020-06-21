@@ -1,33 +1,39 @@
-import { Injectable } from '@angular/core';
-import gql from 'graphql-tag';
-import { Account } from 'chatr-domain';
-import { Apollo } from 'apollo-angular';
+import { Injectable } from '@angular/core'
+import gql from 'graphql-tag'
+import { Account } from 'chatr-domain'
+import { Apollo } from 'apollo-angular'
 
 const GET_ACCOUNT = gql`
   query GetAccount {
-    getAccount() {
+    getAccount {
       id
       email
       criterion {
-
+        ageMin
+        ageMax
+        gender
+        location
+        distance
       }
     }
   }
 `
 
 type Response = {
-  account: Account
+  getAccount: Account
 }
 
 @Injectable({
-  providedIn: 'root'
+  providedIn: 'root',
 })
 export class AccountService {
+  constructor(private apollo: Apollo) {}
 
-  constructor(private apollo: Apollo) { }
+  async getAccount(): Promise<Account> {
+    const resp = await this.apollo
+      .query<Response>({ query: GET_ACCOUNT })
+      .toPromise()
 
-  getAccount(): Promise<Account> {
-    this.apollo.query<Response>({ query: GET_ACCOUNT }).subscribe(r => r.data.account)
-    return Promise.resolve(new Account())
+    return resp.data.getAccount
   }
 }

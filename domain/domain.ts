@@ -1,4 +1,5 @@
 import { Field, ObjectType, InputType } from 'type-graphql'
+import { Type } from 'class-transformer'
 
 @ObjectType()
 export class Message {
@@ -13,7 +14,7 @@ export class Message {
 export class Relation {
   @Field() subject: string
   @Field() target: string
-  @Field() type: string
+  @Field() name: string
 }
 
 @InputType()
@@ -26,14 +27,16 @@ export class MessageInput {
 export class Notification {
   @Field() to: string
   @Field() sent: Date
-  @Field() type: string
+  @Field() name: string
+  @Field() payload: string
 }
 
 @InputType()
 export class ActionInput {
-  @Field() type: string
   @Field() subject: string
   @Field() target: string
+  @Field() name: string
+  @Field() payload: string
 }
 
 @ObjectType()
@@ -71,10 +74,6 @@ export class AccountInput {
 @ObjectType()
 export class Media {
   @Field() filename: string
-  @Field() isDefault: boolean
-  @Field() description: string
-  @Field() type: string
-  @Field() updated: string
 }
 
 @InputType()
@@ -84,14 +83,31 @@ export class MediaInput {
 
 @ObjectType()
 export class Profile {
+  @Field() id: string
   @Field() headline: string
   @Field() description: string
   @Field((type) => [String]) interests: string[]
-  @Field((type) => [Media]) pictures: Media[]
+
+  @Field((type) => [Media])
+  @Type(() => Media)
+  pictures: Media[]
+
   @Field() dob: number
   @Field() gender: string
   @Field() location: string
   @Field() latestActive: Date
+
+  toMatch(): Match {
+    const match = new Match()
+    match.id = this.id
+    match.dob = this.dob
+    match.headline = this.headline
+    match.latestActive = this.latestActive
+    match.location = this.location
+    match.picture = this.pictures ? this.pictures[0].filename : ''
+
+    return match
+  }
 }
 
 @InputType()
