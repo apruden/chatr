@@ -20,7 +20,6 @@ import {
   Profile,
   ProfileInput,
   Account,
-  Criterion,
   Match,
   Relation,
   AccountInput,
@@ -127,18 +126,24 @@ export class MatchResolver {
     @Ctx() context: any,
     @Args() { offset, limit, criterion }: SearchArgs
   ): Promise<Match[]> {
-    log.info('MatchResolver.search %s %s', context.user, criterion, offset, limit)
+    log.info(
+      'MatchResolver.search %s %s',
+      context.user,
+      criterion,
+      offset,
+      limit
+    )
     const year = new Date().getFullYear()
     const { id: to } = context.user
     const args = [
-        year - criterion.ageMin,
-        year - criterion.ageMax,
-        criterion.gender,
-        criterion.location,
-        criterion.distance,
-        limit,
-        offset,
-      ]
+      year - criterion.ageMin,
+      year - criterion.ageMax,
+      criterion.gender,
+      criterion.location,
+      criterion.distance,
+      limit,
+      offset,
+    ]
 
     const res = await pool.query(
       `
@@ -149,7 +154,9 @@ export class MatchResolver {
         AND ST_Distance((p.data ->> 'location')::geometry, $4::geometry) < $5
         ORDER BY (p.data ->> 'latestActive')
         LIMIT $6 OFFSET $7
-      `, args)
+      `,
+      args
+    )
 
     return res.rows.map((row) => plainToClass(Profile, row.data).toMatch())
   }
@@ -186,20 +193,20 @@ export class RelationResolver {
     @Arg('id') id: string
   ): Promise<Relation> {
     const { id: me } = context.user
-    const type = 'blocked'
+    const name = 'blocked'
     await pool.query(
-      `INSERT INTO relations(subject, target, type) VALUE ($1, $2, $3)`,
-      [me, id, type]
+      `INSERT INTO relations(subject, target, name) VALUE ($1, $2, $3)`,
+      [me, id, name]
     )
 
-    return newInstance(Relation, { subject: me, target: id, type })
+    return newInstance(Relation, { subject: me, target: id, name})
   }
 }
 
 @Resolver((of) => Message)
 export class MessageResolver {
   @Query((returns) => [Message])
-  async getLatestMessage(
+  async getLatestMessages(
     @Ctx() context: any,
     @Args() { offset, limit, from }: MessagesArgs
   ): Promise<Message[]> {
@@ -211,7 +218,7 @@ export class MessageResolver {
         WHERE (data ->> 'to') = $1
         AND (data ->> 'from') NOT IN (
           SELECT to FROM relations 
-          WHERE subject = $1 AND target = $2 AND type = 'blocked'
+          WHERE subject = $1 AND target = $2 AND name = 'blocked'
         )
         GROUP BY (data ->> 'from')
         ORDER BY d DESC
@@ -303,7 +310,7 @@ export class NotificationResolver {
   private fromAction(action: ActionInput): Notification {
     const notification = newInstance(Notification, {
       to: action.target,
-      type: action.type,
+      name: action.name,
       sent: Date.now(),
     })
 

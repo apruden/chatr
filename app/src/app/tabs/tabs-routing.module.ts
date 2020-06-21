@@ -31,7 +31,7 @@ const routes: Routes = [
         path: 'chat',
         children: [
           {
-            path: '',
+            path: ':from',
             loadChildren: () =>
               import('../chat/chat.module').then(m => m.ChatPageModule)
           }
@@ -61,9 +61,19 @@ const routes: Routes = [
         path: 'profile',
         children: [
           {
-            path: '',
+            path: ':id',
             loadChildren: () =>
               import('../profile/profile.module').then(m => m.ProfilePageModule)
+          }
+        ]
+      },
+      {
+        path: 'gallery',
+        children: [
+          {
+            path: ':id',
+            loadChildren: () =>
+              import('../gallery/gallery.module').then(m => m.GalleryPageModule)
           }
         ]
       },
