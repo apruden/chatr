@@ -6,7 +6,7 @@ import { Message } from 'chatr-domain'
 import { ActivatedRoute } from '@angular/router'
 
 const GET_MESSAGES = gql`
-  query GetMessages($from: String, $offset: Int, $limit: Int) {
+  query GetMessages($from: String!, $offset: Int, $limit: Int) {
     getMessages(from: $from, offset: $offset, limit: $limit) {
       to
       from

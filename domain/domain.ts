@@ -6,8 +6,18 @@ export class Message {
   @Field() from: string
   @Field() to: string
   @Field() text: string
-  @Field() sent: Date
+
+  @Field()
+  @Type(() => Date)
+  sent: Date
+
   @Field() read: boolean
+}
+
+@InputType()
+export class MessageInput {
+  @Field() to: string
+  @Field() text: string
 }
 
 @ObjectType()
@@ -15,12 +25,6 @@ export class Relation {
   @Field() subject: string
   @Field() target: string
   @Field() name: string
-}
-
-@InputType()
-export class MessageInput {
-  @Field() to: string
-  @Field() text: string
 }
 
 @ObjectType()

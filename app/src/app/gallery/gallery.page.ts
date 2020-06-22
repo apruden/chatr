@@ -6,9 +6,11 @@ import gql from 'graphql-tag'
 import { Media, Profile } from 'chatr-domain'
 
 const GET_PROFILE = gql`
-  query GetProfile($id: String) {
+  query GetProfile($id: String!) {
     getProfile(id: $id) {
-      pictures
+      pictures {
+        filename
+      }
     }
   }
 `

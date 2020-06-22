@@ -5,7 +5,7 @@ import { Apollo } from 'apollo-angular';
 import { AccountService } from '../services/account.service';
 
 const GET_PROFILE = gql`
-  query GetProfile($id: String) {
+  query GetProfile($id: String!) {
     getProfile(id: $id) {
       headline
       description
@@ -13,7 +13,9 @@ const GET_PROFILE = gql`
       interests
       dob
       gender
-      pictures
+      pictures {
+        filename
+      }
     }
   }
 `

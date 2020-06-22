@@ -242,14 +242,17 @@ export class MessageResolver {
       SELECT data FROM messages 
       WHERE (data ->> 'to') = $1 
       AND (data ->> 'from') = $2
-      WHERE id > $3
+      AND id > $3
       ORDER BY id DESC 
       LIMIT $4
       `,
       [me, from, offset, limit]
     )
 
-    return res.rows.map((row) => plainToClass(Message, row.data))
+    return res.rows.map((row) => {
+      row.data.sent = new Date(row.data.sent) // TODO: @Type(..) does not seem to work!
+      return plainToClass(Message, row.data)
+    })
   }
 
   @Mutation((returns) => Message)
@@ -260,6 +263,7 @@ export class MessageResolver {
     const message = newInstance(Message, newMessage)
     message.from = context.user.id
     message.sent = new Date()
+    message.read = false
 
     const res = await pool.query(`INSERT INTO messages(data) VALUES ($1)`, [
       message,
