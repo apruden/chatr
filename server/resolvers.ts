@@ -10,7 +10,7 @@ import {
   ArgsType,
   Field,
   Int,
-  Args,
+  Args
 } from 'type-graphql'
 import {
   Message,
@@ -27,14 +27,9 @@ import {
   Registration,
   RegistrationInput,
 } from 'chatr-domain'
-import { plainToClass } from 'class-transformer'
 import { pool } from './db'
-import { ClassType } from 'class-transformer/ClassTransformer'
 import jwt from 'jsonwebtoken'
 
-function newInstance<T>(cls: ClassType<T>, plain: any): T {
-  return plainToClass(cls, plain)
-}
 
 @ArgsType()
 class PaginationArgs {
@@ -53,7 +48,7 @@ class SearchArgs extends PaginationArgs {
 }
 
 const createAccount = async (oid: string, newAccount: AccountInput) => {
-  const account = newInstance(Account, newAccount)
+  const account = Account.apply(newAccount)
   const res = await pool.query(
     'INSERT INTO accounts(id, oid, data) VALUES ($1, $2, $3)',
     [newAccount.id, oid, newAccount]
@@ -63,7 +58,7 @@ const createAccount = async (oid: string, newAccount: AccountInput) => {
 }
 
 const saveAccount = async (newAccount: AccountInput) => {
-  const account = newInstance(Account, newAccount)
+  const account = Account.apply(newAccount)
   const res = await pool.query('UPDATE accounts SET data = $1 WHERE id = $2', [
     newAccount,
     newAccount.id,
@@ -73,7 +68,7 @@ const saveAccount = async (newAccount: AccountInput) => {
 }
 
 const saveProfile = async (me: string, newProfile: ProfileInput) => {
-  const profile = newInstance(Profile, newProfile)
+  const profile = Profile.apply(newProfile)
   const res = await pool.query(
     'INSERT INTO profiles(id, data) VALUES ($1, $2) ON CONFLICT id DO UPDATE data = $2',
     [me, profile]
@@ -109,7 +104,7 @@ export class AccountResolver {
       me,
     ])
 
-    return res.rows.map((row) => plainToClass(Account, row.data))[0] || null
+    return res.rows.map((row) => Account.apply(row.data))[0] || null
   }
 
   @Mutation((returns) => Account)
@@ -158,7 +153,7 @@ export class MatchResolver {
       args
     )
 
-    return res.rows.map((row) => plainToClass(Profile, row.data).toMatch())
+    return res.rows.map((row) => Profile.apply(row.data).toMatch())
   }
 }
 
@@ -170,7 +165,7 @@ export class ProfileResolver {
       id,
     ])
 
-    return res.rows.map((row) => plainToClass(Profile, row.data))[0]
+    return res.rows.map((row) => Profile.apply(row.data))[0]
   }
 
   @Mutation((returns) => Profile)
@@ -199,7 +194,7 @@ export class RelationResolver {
       [me, id, name]
     )
 
-    return newInstance(Relation, { subject: me, target: id, name})
+    return Relation.apply({ subject: me, target: id, name})
   }
 }
 
@@ -228,7 +223,7 @@ export class MessageResolver {
       [me, from, offset, limit]
     )
 
-    return res.rows.map((row) => plainToClass(Message, row.data))
+    return res.rows.map((row) => Message.apply(row.data))
   }
 
   @Query((returns) => [Message])
@@ -249,10 +244,7 @@ export class MessageResolver {
       [me, from, offset, limit]
     )
 
-    return res.rows.map((row) => {
-      row.data.sent = new Date(row.data.sent) // TODO: @Type(..) does not seem to work!
-      return plainToClass(Message, row.data)
-    })
+    return res.rows.map((row) => Message.apply(row.data))
   }
 
   @Mutation((returns) => Message)
@@ -260,7 +252,7 @@ export class MessageResolver {
     @Ctx() context: any,
     @Arg('data') newMessage: MessageInput
   ): Promise<Message> {
-    const message = newInstance(Message, newMessage)
+    const message = Message.apply(newMessage)
     message.from = context.user.id
     message.sent = new Date()
     message.read = false
@@ -292,7 +284,7 @@ export class NotificationResolver {
       [to, offset, limit]
     )
 
-    return res.rows.map((row) => plainToClass(Notification, row.data))
+    return res.rows.map((row) => Notification.apply(row.data))
   }
 
   @Mutation((returns) => Boolean)
@@ -312,7 +304,7 @@ export class NotificationResolver {
   }
 
   private fromAction(action: ActionInput): Notification {
-    const notification = newInstance(Notification, {
+    const notification = Notification.apply({
       to: action.target,
       name: action.name,
       sent: Date.now(),

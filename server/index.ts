@@ -1,9 +1,14 @@
-import { log } from './logger'
 import 'reflect-metadata'
 import express from 'express'
 import path from 'path'
+import { createServer } from 'http'
+import passport from 'passport'
+import passportJWT from 'passport-jwt'
+import passportLocal from 'passport-local'
+import jwt from 'jsonwebtoken'
 import { buildSchema } from 'type-graphql'
 import { ApolloServer } from 'apollo-server-express'
+import { log } from './logger'
 import {
   MessageResolver,
   MatchResolver,
@@ -13,11 +18,6 @@ import {
   RegistrationResolver,
 } from './resolvers'
 import { PgPubSub } from './pubsub'
-import { createServer } from 'http'
-import passport from 'passport'
-import passportJWT from 'passport-jwt'
-import passportLocal from 'passport-local'
-import jwt from 'jsonwebtoken'
 import { pool } from './db'
 
 const { Strategy: JwtStrategy, ExtractJwt } = passportJWT

@@ -1,8 +1,14 @@
 import { Field, ObjectType, InputType } from 'type-graphql'
-import { Type } from 'class-transformer'
+import { Type, plainToClass, classToPlain } from 'class-transformer'
+
+abstract class Entity {
+  toPlain(): any {
+    return classToPlain(this)
+  }
+}
 
 @ObjectType()
-export class Message {
+export class Message extends Entity {
   @Field() from: string
   @Field() to: string
   @Field() text: string
@@ -12,6 +18,12 @@ export class Message {
   sent: Date
 
   @Field() read: boolean
+
+  // NOTICE: each module that uses class-transformer maintains a different MetadataStorage!!
+  // https://github.com/typestack/class-transformer/issues/36. Workaround providing an static factory method.
+  static apply(plain: any): Message {
+    return plainToClass(Message, plain)
+  }
 }
 
 @InputType()
@@ -25,14 +37,24 @@ export class Relation {
   @Field() subject: string
   @Field() target: string
   @Field() name: string
+  
+  static apply(plain: any): Relation {
+    return plainToClass(Relation, plain)
+  }
 }
 
 @ObjectType()
 export class Notification {
   @Field() to: string
-  @Field() sent: Date
+  @Field()
+  @Type(() => Date)
+  sent: Date
   @Field() name: string
   @Field() payload: string
+
+  static apply(plain: any): Notification {
+    return plainToClass(Notification, plain)
+  }
 }
 
 @InputType()
@@ -50,6 +72,10 @@ export class Criterion {
   @Field() distance: number
   @Field() location: string
   @Field() gender: string
+
+  static apply(plain: any): Criterion {
+    return plainToClass(Criterion, plain)
+  }
 }
 
 @InputType()
@@ -65,7 +91,11 @@ export class CriterionInput {
 export class Account {
   @Field() id: string
   @Field() email: string
-  @Field() criterion: Criterion
+  @Field() @Type(() => Criterion) criterion: Criterion
+
+  static apply(plain: any): Account {
+    return plainToClass(Account, plain)
+  }
 }
 
 @InputType()
@@ -99,7 +129,9 @@ export class Profile {
   @Field() dob: number
   @Field() gender: string
   @Field() location: string
-  @Field() latestActive: Date
+  @Field() 
+  @Type(() => Date)
+  latestActive: Date
 
   toMatch(): Match {
     const match = new Match()
@@ -111,6 +143,10 @@ export class Profile {
     match.picture = this.pictures ? this.pictures[0].filename : ''
 
     return match
+  }
+
+  static apply(plain: any): Profile {
+    return plainToClass(Profile, plain)
   }
 }
 
@@ -132,7 +168,13 @@ export class Match {
   @Field() dob: number
   @Field() location: string
   @Field() headline: string
-  @Field() latestActive: Date
+  @Field() 
+  @Type(() => Date)
+  latestActive: Date
+
+  static apply(plain: any): Match {
+    return plainToClass(Match, plain)
+  }
 }
 
 @ObjectType()
