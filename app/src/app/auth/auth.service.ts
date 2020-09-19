@@ -12,7 +12,7 @@ export class AuthService {
     const result = await Plugins.FacebookLogin.getCurrentAccessToken()
 
     try {
-      return result && result.accessToken
+      return result && result.accessToken == null
     } catch (e) {
       return false
     }
@@ -29,7 +29,7 @@ export class AuthService {
       permissions: FACEBOOK_PERMISSIONS,
     })
 
-    if (result && result.accessToken) {
+    if (result && result.accessToken == null) {
       this.navCtrl.navigateRoot(['/'])
     }
   }
